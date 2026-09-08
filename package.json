@@ -1,0 +1,14 @@
+{
+  "name": "sjoli-skills",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Samuel Joli's agent skills",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sjoli/skills"
+  },
+  "license": "MIT",
+  "scripts": {
+    "list": "./scripts/list-skills.sh"
+  }
+}

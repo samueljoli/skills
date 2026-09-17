@@ -1,3 +1,8 @@
+---
+name: mental-model-builder
+description: "Turn abstract concepts into concrete visual artifacts that support understanding, mental simulation, and prediction."
+---
+
 # Visual Mental Model Builder
 
 ## Purpose

@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Structure Diagram — How the System Is Put Together</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0e1320;
+    --bg-grid: #131a2b;
+    --panel: #141b2c;
+    --panel-border: #253055;
+    --line: #2a3454;
+    --line-lit: #aab4de;
+    --text: #eceff6;
+    --text-muted: #8792ac;
+    --slate: #93a0c2; --slate-dim: #445070;
+    --amber: #e8a33d; --amber-dim: #7a5c2a;
+    --teal: #5fd4c4;  --teal-dim: #2f6a62;
+    --violet: #b09bf7; --violet-dim: #55467e;
+    --mono: 'IBM Plex Mono', monospace;
+    --display: 'Space Grotesk', sans-serif;
+    --body: 'Inter', sans-serif;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:
+      radial-gradient(1200px 600px at 12% -10%, #17203a 0%, transparent 60%),
+      radial-gradient(900px 500px at 100% 10%, #16233a 0%, transparent 55%),
+      var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    min-height: 100vh;
+  }
+  .app{ max-width: 1260px; margin: 0 auto; padding: 32px 20px 60px; }
+  header.top{ margin-bottom: 16px; }
+  .eyebrow{
+    font-family: var(--mono); font-size: 11px; letter-spacing: .14em;
+    color: var(--amber); text-transform: uppercase;
+    display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+  }
+  .eyebrow::before{
+    content:""; width:7px; height:7px; border-radius:50%;
+    background: var(--amber); box-shadow: 0 0 8px 1px var(--amber);
+    animation: blink 1.6s ease-in-out infinite;
+  }
+  @keyframes blink{ 0%,100%{opacity:1} 50%{opacity:.25} }
+  h1{
+    font-family: var(--display); font-weight: 600;
+    font-size: clamp(22px, 3vw, 32px); margin: 0 0 8px; letter-spacing: -0.01em;
+  }
+  .sub{ color: var(--text-muted); font-size: 14px; max-width: 700px; line-height: 1.5; margin: 0 0 14px; }
+
+  .legend{ display:flex; gap:8px; flex-wrap:wrap; }
+  .chip{
+    font-family: var(--mono); font-size: 11px; color: var(--text);
+    background: #1b2438; border: 1px solid var(--panel-border); border-radius: 999px;
+    padding: 5px 12px 5px 9px; display:flex; align-items:center; gap:7px;
+  }
+  .chip .sw{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+
+  .layout{
+    display: grid; grid-template-columns: 1fr 300px; gap: 18px;
+    margin-top: 18px; align-items: start;
+  }
+  @media (max-width: 980px){ .layout{ grid-template-columns: 1fr; } }
+
+  .stage{
+    background: linear-gradient(180deg, var(--panel), #101728);
+    border: 1px solid var(--panel-border); border-radius: 14px;
+    padding: 8px; overflow: auto; position: relative;
+  }
+  .stage::before{
+    content:""; position:absolute; inset:0;
+    background-image:
+      linear-gradient(var(--bg-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px);
+    background-size: 32px 32px; opacity: .35; pointer-events: none;
+  }
+  svg#diagram{ position: relative; width: 100%; min-width: 820px; height: auto; display: block; }
+
+  .group-rect{ fill: rgba(255,255,255,0.02); stroke-width: 1.4; stroke-dasharray: 5 5; rx: 16; transition: stroke .25s ease; }
+  .group-rect.slate{ stroke: var(--slate-dim); } .group-rect.amber{ stroke: var(--amber-dim); }
+  .group-rect.teal{ stroke: var(--teal-dim); } .group-rect.violet{ stroke: var(--violet-dim); }
+  .group-rect.lit.slate{ stroke: var(--slate); } .group-rect.lit.amber{ stroke: var(--amber); }
+  .group-rect.lit.teal{ stroke: var(--teal); } .group-rect.lit.violet{ stroke: var(--violet); }
+  .group-title{ font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; pointer-events:none; }
+  .group-title.slate{ fill: var(--slate); } .group-title.amber{ fill: var(--amber); }
+  .group-title.teal{ fill: var(--teal); } .group-title.violet{ fill: var(--violet); }
+  .group-hit{ fill: transparent; cursor: pointer; }
+
+  .toggle-btn{ cursor: pointer; }
+  .toggle-btn circle{ fill:#1b2438; stroke: var(--panel-border); stroke-width:1.2; transition: stroke .2s ease; }
+  .toggle-btn:hover circle{ stroke: var(--line-lit); }
+  .toggle-btn text{ font-family: var(--mono); font-size: 13px; fill: var(--text-muted); text-anchor:middle; pointer-events:none; }
+
+  .group-children{ transition: opacity .3s ease; }
+  .group-wrap.collapsed .group-children{ opacity: 0; pointer-events: none; }
+  .group-summary{ opacity: 0; transition: opacity .3s ease .1s; pointer-events: none; }
+  .group-wrap.collapsed .group-summary{ opacity: 1; pointer-events: auto; cursor:pointer; }
+  .group-summary rect{ fill:#182238; stroke-width:1.4; rx:12; }
+  .group-summary text{ font-family: var(--mono); font-size: 11px; text-anchor:middle; fill: var(--text-muted); }
+  .group-summary .count{ font-family: var(--display); font-size: 20px; font-weight:600; fill: var(--text); }
+
+  .edge-path{ fill:none; stroke: var(--line); stroke-width: 1.6; transition: stroke .25s ease; }
+  .edge-path.active{ stroke: var(--line-lit); stroke-width: 2; }
+  .edge-label{
+    font-family: var(--mono); font-size: 9.5px; fill: var(--line-lit);
+    text-anchor: middle; opacity: 0; transition: opacity .2s ease; pointer-events: none;
+  }
+  .edge-label.active{ opacity: 1; }
+  .edge-label-bg{ fill: #0e1320; opacity: 0; transition: opacity .2s ease; pointer-events: none; }
+  .edge-label-bg.active{ opacity: .85; }
+  .edge-hit{ fill:none; stroke: transparent; stroke-width: 14; cursor: pointer; }
+
+  .node{ cursor: pointer; }
+  .node rect{ fill: #182238; stroke-width: 1.6; rx: 12; transition: filter .25s ease, stroke .25s ease, opacity .25s ease; }
+  .node .stack-shadow{ fill:#141b2c; stroke: var(--panel-border); stroke-width:1.2; rx:12; }
+  .node text{ font-family: var(--body); font-weight: 600; font-size: 11.5px; fill: var(--text); text-anchor: middle; pointer-events:none; }
+  .node.slate rect.main{ stroke: var(--slate-dim); } .node.amber rect.main{ stroke: var(--amber-dim); }
+  .node.teal rect.main{ stroke: var(--teal-dim); } .node.violet rect.main{ stroke: var(--violet-dim); }
+  .node.active.slate rect.main{ stroke: var(--slate); filter: drop-shadow(0 0 10px rgba(147,160,194,.55)); }
+  .node.active.amber rect.main{ stroke: var(--amber); filter: drop-shadow(0 0 10px rgba(232,163,61,.55)); }
+  .node.active.teal rect.main{ stroke: var(--teal); filter: drop-shadow(0 0 10px rgba(95,212,196,.55)); }
+  .node.active.violet rect.main{ stroke: var(--violet); filter: drop-shadow(0 0 10px rgba(176,155,247,.55)); }
+  .node.selected rect.main{ stroke-width: 2.4; }
+  .node.muted{ opacity: .28; }
+
+  .panel{
+    background: linear-gradient(180deg, var(--panel), #101728);
+    border: 1px solid var(--panel-border); border-radius: 14px;
+    padding: 18px; position: sticky; top: 20px; min-height: 360px;
+  }
+  .panel-kicker{
+    font-family: var(--mono); font-size: 10.5px; color: var(--text-muted);
+    letter-spacing: .08em; text-transform: uppercase; margin-bottom: 8px;
+    display:flex; justify-content: space-between; align-items:center;
+  }
+  .panel-kicker span.tag{ padding: 1px 8px; border-radius: 999px; font-size: 9.5px; letter-spacing: .06em; }
+  .tag.slate{ color: var(--slate); background: rgba(147,160,194,.12); border:1px solid var(--slate-dim); }
+  .tag.amber{ color: var(--amber); background: rgba(232,163,61,.12); border:1px solid var(--amber-dim); }
+  .tag.teal{ color: var(--teal); background: rgba(95,212,196,.12); border:1px solid var(--teal-dim); }
+  .tag.violet{ color: var(--violet); background: rgba(176,155,247,.12); border:1px solid var(--violet-dim); }
+
+  .panel-label{ font-family: var(--display); font-weight: 600; font-size: 18px; margin: 2px 0 8px; }
+  .panel-detail{ font-size: 13px; color: var(--text-muted); line-height: 1.55; margin: 0 0 12px; }
+  .panel-sec-title{
+    font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--text-muted); margin: 12px 0 6px;
+  }
+  .rel-row{
+    display:flex; align-items:center; gap: 7px; font-size: 12.5px;
+    padding: 7px 9px; border-radius: 8px; background: #1b2438; margin-top: 6px;
+    cursor: pointer; border: 1px solid transparent; transition: border-color .15s ease, background .15s ease;
+  }
+  .rel-row:hover{ border-color: var(--line-lit); background: #22304e; }
+  .rel-row .dir{ color: var(--text-muted); font-family: var(--mono); font-size: 11px; flex-shrink:0; }
+  .rel-row .rel{ color: var(--line-lit); font-family: var(--mono); font-size: 11px; flex: 1; }
+  .rel-row .target{ font-weight: 600; }
+  .member-row{ font-size: 12.5px; padding: 6px 9px; border-radius: 8px; background:#1b2438; margin-top:6px; }
+  .member-row b{ color: var(--text); }
+
+  .panel-empty{ font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+  .panel-empty strong{ color: var(--text); }
+
+  .controls{
+    margin-top: 18px; background: rgba(20,27,44,.9); backdrop-filter: blur(8px);
+    border: 1px solid var(--panel-border); border-radius: 14px; padding: 12px 14px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .ctrl-btn{
+    font-family: var(--body); font-weight: 600; font-size: 13px; color: var(--text);
+    background: #1b2438; border: 1px solid var(--panel-border); border-radius: 9px;
+    padding: 8px 13px; cursor: pointer; display: flex; align-items: center; gap: 6px;
+    transition: background .2s ease, border-color .2s ease, transform .08s ease;
+  }
+  .ctrl-btn:hover{ background: #22304e; border-color: var(--line-lit); }
+  .ctrl-btn:active{ transform: scale(.96); }
+  .kbd-hint{ font-family: var(--mono); font-size: 10.5px; color: var(--text-muted); margin-left: auto; }
+
+  @media (prefers-reduced-motion: reduce){ .eyebrow::before{ animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="eyebrow">Boxes & Arrows · Structure Diagram</div>
+    <h1>How the System Is Put Together</h1>
+    <p class="sub">Four layers, twelve components, fourteen structural connections. Click any box to see what it's directly wired to; click a layer's background (or its ⊟ button) to collapse it into a single summary and see the architecture at a higher level.</p>
+    <div class="legend" id="legend"></div>
+  </header>
+
+  <div class="layout">
+    <div class="stage">
+      <svg id="diagram" viewBox="0 0 1400 600" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+
+    <div class="panel" id="panel">
+      <div class="panel-empty">Click any component to see exactly what it connects to, or a layer's background to collapse the whole group into one box.</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="ctrl-btn" id="btnCollapseAll">⊟ Collapse all</button>
+    <button class="ctrl-btn" id="btnExpandAll">⊞ Expand all</button>
+    <button class="ctrl-btn" id="btnReset">⟲ Reset view</button>
+    <div class="kbd-hint">Click empty space to deselect</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const NS = "http://www.w3.org/2000/svg";
+
+  const groupsMeta = {
+    client: { name:'Client',            cat:'slate', x:40,  y:110, w:220, h:430,
+               desc:'Where the user actually is — a browser tab or a mobile app. No direct access to internal services.' },
+    edge:   { name:'Edge & Delivery',   cat:'amber', x:320, y:110, w:220, h:430,
+               desc:'The outermost layer: routes and caches traffic before it ever reaches application code.' },
+    app:    { name:'Application',       cat:'teal',  x:610, y:110, w:350, h:430,
+               desc:'Stateless application logic. Any instance can handle any request — that\u2019s what makes it horizontally scalable.' },
+    data:   { name:'Data',              cat:'violet',x:1010,y:110, w:350, h:430,
+               desc:'Where state actually lives. Everything above this layer can be thrown away and rebuilt; this can\u2019t.' }
+  };
+
+  const NODE_W = 138, NODE_H = 54;
+
+  const nodesMeta = {
+    browser:     { label:'Browser',           group:'client', x:150, y:220,
+                   desc:'The end user\u2019s web browser — renders HTML/CSS/JS and initiates every outbound request.' },
+    mobile:      { label:'Mobile App',        group:'client', x:150, y:420,
+                   desc:'A native iOS/Android client hitting the same backend APIs as the browser.' },
+    cdn:         { label:'CDN',               group:'edge', x:430, y:220,
+                   desc:'Edge-cached copies of static assets served from points of presence near the user.' },
+    lb:          { label:'Load Balancer',     group:'edge', x:430, y:420,
+                   desc:'Distributes incoming traffic across the web server fleet and terminates TLS.' },
+    webservers:  { label:'Web Servers ×3',    group:'app', x:720, y:220, cluster:true,
+                   desc:'A cluster of stateless application server instances running the app\u2019s business logic. Any of the 3 can handle any request.' },
+    apigateway:  { label:'API Gateway',       group:'app', x:900, y:220,
+                   desc:'A single entry point that routes internal API calls to the right backend service.' },
+    authservice: { label:'Auth Service',      group:'app', x:720, y:420,
+                   desc:'Issues and validates session tokens — the only service allowed to read raw credentials.' },
+    jobqueue:    { label:'Job Queue',         group:'app', x:900, y:420,
+                   desc:'Holds background work (emails, exports, thumbnails) so requests don\u2019t block on slow tasks.' },
+    primarydb:   { label:'Primary DB',        group:'data', x:1080, y:220,
+                   desc:'The single source of truth — every write in the system eventually lands here.' },
+    readreplica: { label:'Read Replica',      group:'data', x:1260, y:220,
+                   desc:'A read-only copy of the primary, kept slightly behind, used to offload reporting queries.' },
+    cache:       { label:'Cache',             group:'data', x:1080, y:420,
+                   desc:'An in-memory store for session data and frequently-read values — avoids a database round trip.' },
+    objstorage:  { label:'Object Storage',    group:'data', x:1260, y:420,
+                   desc:'Durable blob storage for uploaded files and the CDN\u2019s origin content.' }
+  };
+
+  const edges = [
+    { s:'browser', t:'cdn',         r:'requests static assets from' },
+    { s:'browser', t:'lb',          r:'sends dynamic requests to' },
+    { s:'mobile',  t:'lb',          r:'sends requests to' },
+    { s:'cdn',     t:'objstorage',  r:'pulls origin files from', arc:true },
+    { s:'lb',      t:'webservers',  r:'distributes traffic across' },
+    { s:'webservers', t:'apigateway', r:'calls internal APIs via' },
+    { s:'apigateway', t:'authservice', r:'delegates authentication to' },
+    { s:'webservers', t:'cache',    r:'reads/writes hot data in' },
+    { s:'webservers', t:'primarydb',r:'reads/writes persistent data in' },
+    { s:'webservers', t:'jobqueue', r:'enqueues background jobs to' },
+    { s:'jobqueue', t:'primarydb',  r:'writes job results to' },
+    { s:'primarydb', t:'readreplica', r:'replicates to' },
+    { s:'webservers', t:'readreplica', r:'reads reporting queries from' },
+    { s:'authservice', t:'primarydb', r:'stores credentials in' }
+  ];
+
+  const adjacency = {};
+  Object.keys(nodesMeta).forEach(id => adjacency[id] = []);
+  edges.forEach((e,i) => {
+    adjacency[e.s].push({ other:e.t, i, dir:'out' });
+    adjacency[e.t].push({ other:e.s, i, dir:'in' });
+  });
+
+  const groupCollapsed = {}; Object.keys(groupsMeta).forEach(g => groupCollapsed[g] = false);
+  const groupMembers = {}; Object.keys(groupsMeta).forEach(g => groupMembers[g] = []);
+  Object.keys(nodesMeta).forEach(id => groupMembers[nodesMeta[id].group].push(id));
+
+  // ---- svg scaffold ----
+  const svg = document.getElementById('diagram');
+  function el(tag, attrs){
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  const defs = el('defs', {});
+  Object.keys(groupsMeta).forEach(cat => {}); // noop placeholder for symmetry
+  ['slate','amber','teal','violet'].forEach(cat => {
+    const marker = el('marker', {
+      id:'arrow-'+cat, viewBox:'0 0 10 10', refX:'8', refY:'5',
+      markerWidth:'6.5', markerHeight:'6.5', orient:'auto-start-reverse'
+    });
+    marker.appendChild(el('path', { d:'M0,0 L10,5 L0,10 z', fill:'var(--'+cat+')' }));
+    defs.appendChild(marker);
+  });
+  svg.appendChild(defs);
+
+  const edgeLayer = el('g', {});
+  const groupLayer = el('g', {});
+  svg.appendChild(edgeLayer);
+  svg.appendChild(groupLayer);
+
+  // ---- groups + nodes ----
+  const groupEls = {};
+  const nodeEls = {};
+
+  Object.keys(groupsMeta).forEach(gid => {
+    const gm = groupsMeta[gid];
+    const cx = gm.x + gm.w/2, cy = gm.y + gm.h/2;
+    const wrap = el('g', { class:'group-wrap', id:'gw-'+gid });
+
+    const hit = el('rect', { class:'group-hit', x:gm.x, y:gm.y, width:gm.w, height:gm.h, rx:16 });
+    hit.addEventListener('click', (ev) => { ev.stopPropagation(); selectGroup(gid); });
+    wrap.appendChild(hit);
+
+    const rect = el('rect', { class:'group-rect '+gm.cat, x:gm.x, y:gm.y, width:gm.w, height:gm.h, id:'grect-'+gid });
+    rect.style.pointerEvents = 'none';
+    wrap.appendChild(rect);
+
+    const title = el('text', { class:'group-title '+gm.cat, x:gm.x+16, y:gm.y+26 });
+    title.textContent = gm.name;
+    wrap.appendChild(title);
+
+    const toggle = el('g', { class:'toggle-btn' });
+    const tCx = gm.x+gm.w-22, tCy = gm.y+22;
+    toggle.appendChild(el('circle', { cx:tCx, cy:tCy, r:11 }));
+    const tText = el('text', { x:tCx, y:tCy+4 });
+    tText.textContent = '−';
+    toggle.appendChild(tText);
+    toggle.addEventListener('click', (ev) => { ev.stopPropagation(); toggleGroup(gid); });
+    wrap.appendChild(toggle);
+
+    const childrenG = el('g', { class:'group-children' });
+    wrap.appendChild(childrenG);
+
+    const summary = el('g', { class:'group-summary' });
+    summary.appendChild(el('rect', { x:cx-90, y:cy-34, width:180, height:68, class:gm.cat }));
+    const countText = el('text', { class:'count', x:cx, y:cy-4 });
+    countText.textContent = groupMembers[gid].length;
+    const capText = el('text', { x:cx, y:cy+18 });
+    capText.textContent = 'components collapsed';
+    summary.appendChild(countText); summary.appendChild(capText);
+    summary.addEventListener('click', (ev) => { ev.stopPropagation(); toggleGroup(gid); });
+    wrap.appendChild(summary);
+
+    groupLayer.appendChild(wrap);
+    groupEls[gid] = { wrap, rect, toggle:tText, cx, cy, hw:gm.w/2, hh:gm.h/2 };
+
+    groupMembers[gid].forEach(id => {
+      const m = nodesMeta[id];
+      const g = el('g', { class:'node '+gm.cat, id:'n-'+id, transform:`translate(${m.x},${m.y})` });
+      if (m.cluster){
+        g.appendChild(el('rect', { class:'stack-shadow', x:-NODE_W/2+8, y:-NODE_H/2+8, width:NODE_W, height:NODE_H }));
+        g.appendChild(el('rect', { class:'stack-shadow', x:-NODE_W/2+4, y:-NODE_H/2+4, width:NODE_W, height:NODE_H }));
+      }
+      g.appendChild(el('rect', { class:'main', x:-NODE_W/2, y:-NODE_H/2, width:NODE_W, height:NODE_H }));
+      const t = el('text', { x:0, y:5 });
+      t.textContent = m.label;
+      g.appendChild(t);
+      g.addEventListener('click', (ev) => { ev.stopPropagation(); selectNode(id); });
+      childrenG.appendChild(g);
+      nodeEls[id] = g;
+    });
+  });
+
+  const edgeEls = edges.map((e, i) => {
+    const g = el('g', { class:'edge' });
+    const path = el('path', { class:'edge-path' });
+    const hit = el('path', { class:'edge-hit' });
+    g.appendChild(path); g.appendChild(hit);
+    edgeLayer.appendChild(g);
+    const bg = el('rect', { class:'edge-label-bg' });
+    const label = el('text', { class:'edge-label' });
+    label.textContent = e.r;
+    edgeLayer.appendChild(bg); edgeLayer.appendChild(label);
+    hit.addEventListener('click', (ev) => { ev.stopPropagation(); selectEdge(i); });
+    return { path, hit, bg, label };
+  });
+
+  svg.addEventListener('click', () => selectNothing());
+
+  // ---- geometry ----
+  function anchorFor(id){
+    const m = nodesMeta[id];
+    if (groupCollapsed[m.group]){
+      const gEl = groupEls[m.group];
+      return { cx:gEl.cx, cy:gEl.cy, hw:gEl.hw, hh:gEl.hh, group:m.group, collapsed:true };
+    }
+    return { cx:m.x, cy:m.y, hw:NODE_W/2, hh:NODE_H/2, group:m.group, collapsed:false };
+  }
+  function rectExit(cx,cy,hw,hh,dx,dy){
+    const tx = dx !== 0 ? hw/Math.abs(dx) : Infinity;
+    const ty = dy !== 0 ? hh/Math.abs(dy) : Infinity;
+    const t = Math.min(tx,ty);
+    return { x:cx+dx*t, y:cy+dy*t };
+  }
+
+  function renderEdges(){
+    edges.forEach((e,i) => {
+      const A = anchorFor(e.s), B = anchorFor(e.t);
+      const ee = edgeEls[i];
+      const hideInternal = A.collapsed && B.collapsed && A.group === B.group;
+      if (hideInternal){
+        ee.path.style.opacity = 0; ee.hit.style.pointerEvents = 'none'; ee.label.classList.remove('active'); ee.bg.classList.remove('active');
+        return;
+      }
+      ee.path.style.opacity = 1; ee.hit.style.pointerEvents = 'auto';
+      const dx = B.cx-A.cx, dy = B.cy-A.cy;
+      const p0 = rectExit(A.cx, A.cy, A.hw, A.hh, dx, dy);
+      const p1 = rectExit(B.cx, B.cy, B.hw, B.hh, -dx, -dy);
+      let d;
+      if (e.arc){
+        const midx = (p0.x+p1.x)/2;
+        const topY = Math.min(p0.y,p1.y) - 150;
+        d = `M ${p0.x},${p0.y} Q ${midx},${topY} ${p1.x},${p1.y}`;
+        ee.label.setAttribute('x', midx); ee.label.setAttribute('y', topY+14);
+      } else {
+        d = `M ${p0.x},${p0.y} L ${p1.x},${p1.y}`;
+        ee.label.setAttribute('x', (p0.x+p1.x)/2); ee.label.setAttribute('y', (p0.y+p1.y)/2 - 6);
+      }
+      ee.path.setAttribute('d', d);
+      ee.hit.setAttribute('d', d);
+      const arrowCat = groupsMeta[nodesMeta[e.s].group].cat;
+      ee.path.setAttribute('marker-end', 'url(#arrow-'+arrowCat+')');
+      if (ee.label.classList.contains('active') || ee.bg.classList.contains('active')){
+        const bbox = ee.label.getBBox();
+        ee.bg.setAttribute('x', bbox.x-4); ee.bg.setAttribute('y', bbox.y-2);
+        ee.bg.setAttribute('width', bbox.width+8); ee.bg.setAttribute('height', bbox.height+4);
+        ee.bg.setAttribute('rx', 3);
+      }
+    });
+  }
+
+  // ---- collapse / expand ----
+  function toggleGroup(gid){
+    groupCollapsed[gid] = !groupCollapsed[gid];
+    groupEls[gid].wrap.classList.toggle('collapsed', groupCollapsed[gid]);
+    groupEls[gid].toggle.textContent = groupCollapsed[gid] ? '+' : '−';
+    setTimeout(renderEdges, 10);
+    renderEdges();
+    let frames = 0;
+    const iv = setInterval(() => { renderEdges(); frames++; if (frames>18) clearInterval(iv); }, 20);
+  }
+  document.getElementById('btnCollapseAll').addEventListener('click', () => {
+    Object.keys(groupsMeta).forEach(gid => { if (!groupCollapsed[gid]) toggleGroup(gid); });
+  });
+  document.getElementById('btnExpandAll').addEventListener('click', () => {
+    Object.keys(groupsMeta).forEach(gid => { if (groupCollapsed[gid]) toggleGroup(gid); });
+  });
+
+  // ---- legend ----
+  const legendWrap = document.getElementById('legend');
+  Object.keys(groupsMeta).forEach(gid => {
+    const gm = groupsMeta[gid];
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.innerHTML = `<span class="sw" style="background:var(--${gm.cat})"></span>${gm.name}`;
+    legendWrap.appendChild(chip);
+  });
+
+  // ---- selection / inspector ----
+  let selected = null;
+  const panel = document.getElementById('panel');
+
+  function clearVisualSelection(){
+    Object.values(nodeEls).forEach(g => { g.classList.remove('selected','active','muted'); });
+    Object.values(groupEls).forEach(g2 => g2.rect.classList.remove('lit'));
+    edgeEls.forEach(ee => { ee.path.classList.remove('active'); ee.label.classList.remove('active'); ee.bg.classList.remove('active'); });
+  }
+
+  function selectNothing(){ selected = null; clearVisualSelection(); renderEmpty(); }
+
+  function selectNode(id){
+    selected = { type:'node', id };
+    clearVisualSelection();
+    const neigh = new Set(adjacency[id].map(a => a.other).concat([id]));
+    Object.keys(nodeEls).forEach(k => {
+      nodeEls[k].classList.toggle('muted', !neigh.has(k));
+    });
+    nodeEls[id].classList.add('selected','active');
+    edges.forEach((e,i) => {
+      if (e.s === id || e.t === id){
+        edgeEls[i].path.classList.add('active');
+        edgeEls[i].label.classList.add('active');
+        edgeEls[i].bg.classList.add('active');
+      }
+    });
+    renderEdges();
+
+    const m = nodesMeta[id];
+    const gm = groupsMeta[m.group];
+    const rels = adjacency[id].map(a => {
+      const e = edges[a.i];
+      return a.dir === 'out'
+        ? { dir:'→', rel:e.r, target:nodesMeta[a.other].label, id:a.other }
+        : { dir:'←', rel:e.r, target:nodesMeta[a.other].label, id:a.other };
+    });
+    panel.innerHTML = `
+      <div class="panel-kicker"><span>Component</span><span class="tag ${gm.cat}">${gm.name}</span></div>
+      <div class="panel-label">${m.label}</div>
+      <p class="panel-detail">${m.desc}</p>
+      <div class="panel-sec-title">Direct connections (${rels.length})</div>
+      <div id="relList"></div>
+    `;
+    const relList = panel.querySelector('#relList');
+    rels.forEach(r => {
+      const row = document.createElement('div');
+      row.className = 'rel-row';
+      row.innerHTML = `<span class="dir">${r.dir}</span><span class="rel">${r.rel}</span><span class="target">${r.target}</span>`;
+      row.addEventListener('click', (ev) => { ev.stopPropagation(); selectNode(r.id); });
+      relList.appendChild(row);
+    });
+  }
+
+  function selectEdge(i){
+    selected = { type:'edge', id:i };
+    clearVisualSelection();
+    const e = edges[i];
+    edgeEls[i].path.classList.add('active'); edgeEls[i].label.classList.add('active'); edgeEls[i].bg.classList.add('active');
+    if (nodeEls[e.s]) nodeEls[e.s].classList.add('active');
+    if (nodeEls[e.t]) nodeEls[e.t].classList.add('active');
+    renderEdges();
+    const A = nodesMeta[e.s], B = nodesMeta[e.t];
+    panel.innerHTML = `
+      <div class="panel-kicker"><span>Connection</span><span class="tag ${groupsMeta[B.group].cat}">${groupsMeta[B.group].name}</span></div>
+      <div class="panel-label">${A.label} → ${B.label}</div>
+      <p class="panel-detail">${A.label} ${e.r} ${B.label}.</p>
+    `;
+  }
+
+  function selectGroup(gid){
+    selected = { type:'group', id:gid };
+    clearVisualSelection();
+    groupEls[gid].rect.classList.add('lit');
+    const gm = groupsMeta[gid];
+    panel.innerHTML = `
+      <div class="panel-kicker"><span>Layer</span><span class="tag ${gm.cat}">${gm.name}</span></div>
+      <div class="panel-label">${gm.name}</div>
+      <p class="panel-detail">${gm.desc}</p>
+      <div class="panel-sec-title">Contains (${groupMembers[gid].length})</div>
+      <div id="memberList"></div>
+    `;
+    const memberList = panel.querySelector('#memberList');
+    groupMembers[gid].forEach(id => {
+      const row = document.createElement('div');
+      row.className = 'member-row';
+      row.innerHTML = `<b>${nodesMeta[id].label}</b>`;
+      memberList.appendChild(row);
+    });
+  }
+
+  function renderEmpty(){
+    panel.innerHTML = `<div class="panel-empty">Click any component to see exactly what it connects to, or a layer's background to collapse the whole group into one box.</div>`;
+  }
+
+  document.getElementById('btnReset').addEventListener('click', () => {
+    Object.keys(groupCollapsed).forEach(g => { if (groupCollapsed[g]) toggleGroup(g); });
+    selectNothing();
+  });
+
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape') selectNothing(); });
+
+  renderEdges();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Tree Diagram — How the Dashboard Is Composed</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0e1320;
+    --bg-grid: #131a2b;
+    --panel: #141b2c;
+    --panel-border: #253055;
+    --line: #2a3454;
+    --line-lit: #aab4de;
+    --text: #eceff6;
+    --text-muted: #8792ac;
+    --slate: #93a0c2; --slate-dim: #445070;
+    --amber: #e8a33d; --amber-dim: #7a5c2a;
+    --teal: #5fd4c4;  --teal-dim: #2f6a62;
+    --violet: #b09bf7; --violet-dim: #55467e;
+    --rose: #e8798a;  --rose-dim: #7a4451;
+    --mono: 'IBM Plex Mono', monospace;
+    --display: 'Space Grotesk', sans-serif;
+    --body: 'Inter', sans-serif;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:
+      radial-gradient(1200px 600px at 12% -10%, #17203a 0%, transparent 60%),
+      radial-gradient(900px 500px at 100% 10%, #16233a 0%, transparent 55%),
+      var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    min-height: 100vh;
+  }
+  .app{ max-width: 1180px; margin: 0 auto; padding: 32px 20px 60px; }
+  header.top{ margin-bottom: 16px; }
+  .eyebrow{
+    font-family: var(--mono); font-size: 11px; letter-spacing: .14em;
+    color: var(--amber); text-transform: uppercase;
+    display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+  }
+  .eyebrow::before{
+    content:""; width:7px; height:7px; border-radius:50%;
+    background: var(--amber); box-shadow: 0 0 8px 1px var(--amber);
+    animation: blink 1.6s ease-in-out infinite;
+  }
+  @keyframes blink{ 0%,100%{opacity:1} 50%{opacity:.25} }
+  h1{
+    font-family: var(--display); font-weight: 600;
+    font-size: clamp(22px, 3vw, 32px); margin: 0 0 8px; letter-spacing: -0.01em;
+  }
+  .sub{ color: var(--text-muted); font-size: 14px; max-width: 700px; line-height: 1.5; margin: 0 0 14px; }
+  .legend{ display:flex; gap:8px; flex-wrap:wrap; }
+  .chip{
+    font-family: var(--mono); font-size: 11px; color: var(--text);
+    background: #1b2438; border: 1px solid var(--panel-border); border-radius: 999px;
+    padding: 5px 12px 5px 9px; display:flex; align-items:center; gap:7px;
+  }
+  .chip .sw{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+
+  .layout{
+    display: grid; grid-template-columns: 1fr 300px; gap: 18px;
+    margin-top: 18px; align-items: start;
+  }
+  @media (max-width: 980px){ .layout{ grid-template-columns: 1fr; } }
+
+  .stage{
+    background: linear-gradient(180deg, var(--panel), #101728);
+    border: 1px solid var(--panel-border); border-radius: 14px;
+    padding: 8px; overflow: auto; position: relative;
+  }
+  .stage::before{
+    content:""; position:absolute; inset:0;
+    background-image:
+      linear-gradient(var(--bg-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px);
+    background-size: 32px 32px; opacity: .35; pointer-events: none;
+  }
+  svg#diagram{ position: relative; width: 100%; min-width: 520px; height: auto; display: block; }
+
+  .connector{ fill:none; stroke: var(--line); stroke-width: 1.4; }
+  .connector.active{ stroke: var(--line-lit); stroke-width: 1.8; }
+
+  .chevron{ cursor: pointer; }
+  .chevron circle{ fill:#1b2438; stroke: var(--panel-border); stroke-width:1.2; transition: stroke .2s ease; }
+  .chevron:hover circle{ stroke: var(--line-lit); }
+  .chevron path{ stroke: var(--text-muted); stroke-width: 1.6; fill:none; stroke-linecap:round; stroke-linejoin:round; transition: transform .2s ease; }
+  .chevron.leaf{ opacity: 0; pointer-events:none; }
+
+  .node-row{ cursor: pointer; }
+  .node-row rect{ fill: #182238; stroke-width: 1.5; rx: 8; transition: filter .2s ease, stroke .2s ease; }
+  .node-row text{ font-family: var(--mono); font-size: 12px; fill: var(--text); pointer-events:none; }
+  .node-row .count{ fill: var(--text-muted); font-size: 10.5px; }
+  .node-row.slate rect{ stroke: var(--slate-dim); } .node-row.slate text.label{ fill: var(--slate); }
+  .node-row.amber rect{ stroke: var(--amber-dim); } .node-row.amber text.label{ fill: var(--amber); }
+  .node-row.teal rect{ stroke: var(--teal-dim); } .node-row.teal text.label{ fill: var(--teal); }
+  .node-row.violet rect{ stroke: var(--violet-dim); } .node-row.violet text.label{ fill: var(--violet); }
+  .node-row.rose rect{ stroke: var(--rose-dim); } .node-row.rose text.label{ fill: var(--rose); }
+  .node-row.selected rect{ stroke-width: 2.4; filter: drop-shadow(0 0 8px rgba(170,180,222,.5)); }
+  .node-row.dimmed{ opacity: .35; }
+  .node-g{ transition: opacity .25s ease; }
+  .node-g.hidden{ opacity: 0; pointer-events: none; }
+
+  .panel{
+    background: linear-gradient(180deg, var(--panel), #101728);
+    border: 1px solid var(--panel-border); border-radius: 14px;
+    padding: 16px; position: sticky; top: 20px; min-height: 420px;
+  }
+  .preview-wrap{
+    background:#0c1220; border:1px solid var(--panel-border); border-radius:10px; padding:8px;
+    margin-bottom: 14px;
+  }
+  .preview-title{
+    font-family: var(--mono); font-size: 9.5px; letter-spacing:.08em; text-transform:uppercase;
+    color: var(--text-muted); margin-bottom: 6px;
+  }
+  #preview{ width:100%; height:auto; display:block; }
+  .pv-rect{ fill:#1b2438; stroke: var(--panel-border); stroke-width:1; transition: fill .2s ease, stroke .2s ease; }
+  .pv-rect.hl{ fill: rgba(170,180,222,.35); stroke: var(--line-lit); stroke-width:1.5; }
+  .pv-rect.ancestor{ stroke: var(--line-lit); stroke-width:1.2; stroke-dasharray:2 2; }
+  .pv-outline{ fill:none; stroke: var(--panel-border); stroke-width:1.4; }
+  .pv-outline.hl{ stroke: var(--line-lit); stroke-width:2; }
+
+  .panel-kicker{
+    font-family: var(--mono); font-size: 10.5px; color: var(--text-muted);
+    letter-spacing: .08em; text-transform: uppercase; margin-bottom: 8px;
+    display:flex; justify-content: space-between; align-items:center;
+  }
+  .panel-kicker span.tag{ padding: 1px 8px; border-radius: 999px; font-size: 9.5px; letter-spacing: .06em; }
+  .tag.slate{ color: var(--slate); background: rgba(147,160,194,.12); border:1px solid var(--slate-dim); }
+  .tag.amber{ color: var(--amber); background: rgba(232,163,61,.12); border:1px solid var(--amber-dim); }
+  .tag.teal{ color: var(--teal); background: rgba(95,212,196,.12); border:1px solid var(--teal-dim); }
+  .tag.violet{ color: var(--violet); background: rgba(176,155,247,.12); border:1px solid var(--violet-dim); }
+  .tag.rose{ color: var(--rose); background: rgba(232,121,138,.12); border:1px solid var(--rose-dim); }
+
+  .breadcrumb{ font-family: var(--mono); font-size: 11px; color: var(--text-muted); margin-bottom: 10px; line-height:1.7; }
+  .breadcrumb .crumb{ cursor:pointer; color: var(--line-lit); }
+  .breadcrumb .crumb:hover{ text-decoration: underline; }
+  .breadcrumb .sep{ margin: 0 4px; opacity:.5; }
+  .breadcrumb .current{ color: var(--text); font-weight:600; }
+
+  .panel-label{ font-family: var(--display); font-weight: 600; font-size: 18px; margin: 2px 0 8px; }
+  .panel-detail{ font-size: 13px; color: var(--text-muted); line-height: 1.55; margin: 0 0 12px; }
+  .panel-sec-title{
+    font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--text-muted); margin: 12px 0 6px;
+  }
+  .child-row{
+    font-size: 12.5px; padding: 7px 9px; border-radius: 8px; background: #1b2438; margin-top: 6px;
+    cursor: pointer; border: 1px solid transparent; transition: border-color .15s ease, background .15s ease;
+  }
+  .child-row:hover{ border-color: var(--line-lit); background: #22304e; }
+  .leaf-note{ font-family: var(--mono); font-size: 11.5px; color: var(--text-muted); background:#1b2438; border-radius:8px; padding:8px 10px; }
+
+  .panel-empty{ font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+  .panel-empty strong{ color: var(--text); }
+
+  .controls{
+    margin-top: 18px; background: rgba(20,27,44,.9); backdrop-filter: blur(8px);
+    border: 1px solid var(--panel-border); border-radius: 14px; padding: 12px 14px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .ctrl-btn{
+    font-family: var(--body); font-weight: 600; font-size: 13px; color: var(--text);
+    background: #1b2438; border: 1px solid var(--panel-border); border-radius: 9px;
+    padding: 8px 13px; cursor: pointer; display: flex; align-items: center; gap: 6px;
+    transition: background .2s ease, border-color .2s ease, transform .08s ease;
+  }
+  .ctrl-btn:hover{ background: #22304e; border-color: var(--line-lit); }
+  .ctrl-btn:active{ transform: scale(.96); }
+  .kbd-hint{ font-family: var(--mono); font-size: 10.5px; color: var(--text-muted); margin-left: auto; }
+
+  @media (prefers-reduced-motion: reduce){ .eyebrow::before{ animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="eyebrow">Tree Diagram · Composition</div>
+    <h1>How the Dashboard Is Composed</h1>
+    <p class="sub">Twenty-three components, nested up to four levels deep. Click a component to see it highlighted in the live preview and trace its place in the whole; click the ◂ triangle to expand or collapse a branch.</p>
+    <div class="legend" id="legend"></div>
+  </header>
+
+  <div class="layout">
+    <div class="stage">
+      <svg id="diagram" viewBox="0 0 900 900" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+
+    <div class="panel" id="panel">
+      <div class="preview-wrap">
+        <div class="preview-title">Live preview</div>
+        <svg id="preview" viewBox="0 0 280 192" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <div class="panel-empty">Click any component in the tree to see where it lives in the page and how it's nested.</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="ctrl-btn" id="btnExpandAll">⊞ Expand all</button>
+    <button class="ctrl-btn" id="btnCollapseAll">⊟ Collapse to top level</button>
+    <button class="ctrl-btn" id="btnReset">⟲ Reset view</button>
+    <div class="kbd-hint">Click empty space to deselect</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const NS = "http://www.w3.org/2000/svg";
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const branches = {
+    slate:  { name:'Shell' },
+    amber:  { name:'Header' },
+    teal:   { name:'Sidebar' },
+    violet: { name:'Main content' },
+    rose:   { name:'Footer' }
+  };
+
+  // tree data: id, label, parent, cat, desc, count(optional)
+  const nodesRaw = [
+    { id:'root',        label:'App',            parent:null,       cat:'slate', desc:'The whole dashboard application, mounted at the page root.' },
+    { id:'layout',       label:'Layout',         parent:'root',      cat:'slate', desc:'The single top-level shell — every other piece nests inside it.' },
+    { id:'header',       label:'Header',         parent:'layout',    cat:'amber', desc:'Fixed top bar with branding and primary navigation.' },
+    { id:'logo',         label:'Logo',           parent:'header',    cat:'amber', desc:'Clickable wordmark that links back to the dashboard home.' },
+    { id:'navmenu',      label:'NavMenu',        parent:'header',    cat:'amber', desc:'Top-level section links — Overview, Reports, Settings.' },
+    { id:'usermenu',     label:'UserMenu',       parent:'header',    cat:'amber', desc:'Avatar, name, and a dropdown for account actions.' },
+    { id:'sidebar',      label:'Sidebar',        parent:'layout',    cat:'teal',  desc:'Collapsible left rail for secondary navigation.' },
+    { id:'navlink',      label:'NavLink',        parent:'sidebar',   cat:'teal',  count:5, desc:'One link per workspace section; highlights the active route.' },
+    { id:'collapsetoggle', label:'CollapseToggle', parent:'sidebar', cat:'teal',  desc:'Shrinks the sidebar to icon-only width and remembers the choice.' },
+    { id:'main',         label:'MainContent',    parent:'layout',    cat:'violet',desc:'Everything that changes when you navigate — the actual page content.' },
+    { id:'pageheader',   label:'PageHeader',     parent:'main',      cat:'violet',desc:'Page title, breadcrumb, and the primary action button.' },
+    { id:'statsrow',     label:'StatsRow',       parent:'main',      cat:'violet',desc:'A horizontal row of headline metrics.' },
+    { id:'statcard',     label:'StatCard',       parent:'statsrow',  cat:'violet',count:4, desc:'One number, one label, one trend arrow — Revenue, Users, Churn, NPS.' },
+    { id:'chartpanel',   label:'ChartPanel',     parent:'main',      cat:'violet',desc:'The main visualization for the page.' },
+    { id:'linechart',    label:'LineChart',      parent:'chartpanel',cat:'violet',desc:'Renders the selected metric over time using the shared charting library.' },
+    { id:'chartlegend',  label:'Legend',         parent:'chartpanel',cat:'violet',desc:'Toggles each series on and off; stays in sync with the chart\u2019s colors.' },
+    { id:'datatable',    label:'DataTable',      parent:'main',      cat:'violet',desc:'Paginated, sortable table of the underlying records.' },
+    { id:'tablehead',    label:'TableHeader',    parent:'datatable', cat:'violet',desc:'Column labels; clicking one sorts the table.' },
+    { id:'tablerow',     label:'TableRow',       parent:'datatable', cat:'violet',count:12, desc:'One row per record on the current page.' },
+    { id:'pagination',   label:'Pagination',     parent:'datatable', cat:'violet',desc:'Page number controls plus a rows-per-page selector.' },
+    { id:'footer',       label:'Footer',         parent:'layout',    cat:'rose',  desc:'Fixed bottom bar with legal and secondary links.' },
+    { id:'copyright',    label:'CopyrightText',  parent:'footer',    cat:'rose',  desc:'\u00A9 year and company name.' },
+    { id:'sociallinks',  label:'SocialLinks',    parent:'footer',    cat:'rose',  desc:'Icons linking to the company\u2019s social profiles.' }
+  ];
+
+  const nodeById = {};
+  nodesRaw.forEach(n => { n.children = []; n.expanded = true; nodeById[n.id] = n; });
+  nodesRaw.forEach(n => { if (n.parent) nodeById[n.parent].children.push(n.id); });
+  nodesRaw.forEach(n => { n.depth = n.parent ? nodeById[n.parent].depth + 1 : 0; });
+
+  const ROW_H = 34, INDENT = 30, PAD_TOP = 26, PAD_LEFT = 24, NODE_H = 24;
+
+  // ---- svg scaffold ----
+  const svg = document.getElementById('diagram');
+  function el(tag, attrs){
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  const connectorLayer = el('g', {});
+  const nodeLayer = el('g', {});
+  svg.appendChild(connectorLayer);
+  svg.appendChild(nodeLayer);
+
+  const nodeEls = {};
+  nodesRaw.forEach(n => {
+    const g = el('g', { class:'node-g', id:'ng-'+n.id });
+    const row = el('g', { class:'node-row '+n.cat, id:'row-'+n.id });
+
+    const labelText = n.label + (n.count ? ' ×'+n.count : '');
+    const textW = Math.max(70, labelText.length*7.2 + 20);
+    const rect = el('rect', { x:0, y:-NODE_H/2, width:textW, height:NODE_H });
+    row.appendChild(rect);
+    const t = el('text', { class:'label', x:10, y:4 });
+    t.textContent = labelText;
+    row.appendChild(t);
+    row.addEventListener('click', (ev) => { ev.stopPropagation(); selectNode(n.id); });
+    g.appendChild(row);
+    n._boxW = textW;
+
+    let chev = null;
+    if (n.children.length){
+      chev = el('g', { class:'chevron' });
+      chev.appendChild(el('circle', { cx:-14, cy:0, r:9 }));
+      const arrow = el('path', { d:'M-17,-3 L-11,0 L-17,3', class:'chevarrow' });
+      chev.appendChild(arrow);
+      chev.addEventListener('click', (ev) => { ev.stopPropagation(); toggleExpand(n.id); });
+      g.appendChild(chev);
+    } else {
+      chev = el('g', { class:'chevron leaf' });
+      g.appendChild(chev);
+    }
+
+    nodeLayer.appendChild(g);
+    nodeEls[n.id] = { g, row, chev, arrow: chev.querySelector('path') };
+  });
+
+  const connectorEls = {};
+  nodesRaw.forEach(n => {
+    if (!n.parent) return;
+    const path = el('path', { class:'connector' });
+    connectorLayer.appendChild(path);
+    connectorEls[n.id] = path;
+  });
+
+  svg.addEventListener('click', () => selectNothing());
+
+  // ---- layout computation ----
+  let animId = 0;
+  const posY = {}; nodesRaw.forEach(n => posY[n.id] = 0);
+
+  function visibleList(){
+    const list = [];
+    function walk(id){
+      const n = nodeById[id];
+      list.push(n);
+      if (n.expanded){ n.children.forEach(walk); }
+    }
+    walk('root');
+    return list;
+  }
+
+  function computeLayout(){
+    const list = visibleList();
+    const visibleSet = new Set(list.map(n => n.id));
+    list.forEach((n, i) => {
+      n._targetY = PAD_TOP + i*ROW_H;
+      n._targetX = PAD_LEFT + n.depth*INDENT;
+    });
+    return { list, visibleSet };
+  }
+
+  function applyStatic(){
+    const { list, visibleSet } = computeLayout();
+    nodesRaw.forEach(n => {
+      const hidden = !visibleSet.has(n.id);
+      nodeEls[n.id].g.classList.toggle('hidden', hidden);
+      if (!hidden){ posY[n.id] = n._targetY; }
+    });
+    render();
+    const maxY = Math.max(...list.map(n => n._targetY)) + 60;
+    svg.setAttribute('viewBox', `0 0 900 ${Math.max(300, maxY)}`);
+  }
+
+  function animateToLayout(){
+    const { list, visibleSet } = computeLayout();
+    nodesRaw.forEach(n => {
+      const hidden = !visibleSet.has(n.id);
+      nodeEls[n.id].g.classList.toggle('hidden', hidden);
+    });
+    const myAnim = ++animId;
+    const startPos = {}; list.forEach(n => startPos[n.id] = (posY[n.id] || n._targetY));
+    const start = performance.now();
+    const duration = 320;
+    const maxY = Math.max(...list.map(n => n._targetY)) + 60;
+    svg.setAttribute('viewBox', `0 0 900 ${Math.max(300, maxY)}`);
+
+    function frame(now){
+      if (myAnim !== animId) return;
+      const t = Math.min(1, (now-start)/duration);
+      const eased = t<.5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2;
+      list.forEach(n => {
+        posY[n.id] = startPos[n.id] + (n._targetY - startPos[n.id]) * eased;
+      });
+      render();
+      if (t < 1) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function render(){
+    nodesRaw.forEach(n => {
+      const y = posY[n.id];
+      const x = n._targetX !== undefined ? n._targetX : (PAD_LEFT + n.depth*INDENT);
+      nodeEls[n.id].g.setAttribute('transform', `translate(${x},${y})`);
+    });
+    nodesRaw.forEach(n => {
+      if (!n.parent) return;
+      const p = nodeById[n.parent];
+      const path = connectorEls[n.id];
+      const px = p._targetX !== undefined ? p._targetX : (PAD_LEFT + p.depth*INDENT);
+      const py = posY[p.id];
+      const cx = n._targetX !== undefined ? n._targetX : (PAD_LEFT + n.depth*INDENT);
+      const cy = posY[n.id];
+      const midY = (py+cy)/2;
+      const d = `M ${px-14},${py} L ${px-14},${cy} L ${cx-24},${cy}`;
+      path.setAttribute('d', d);
+    });
+  }
+
+  function toggleExpand(id){
+    const n = nodeById[id];
+    n.expanded = !n.expanded;
+    nodeEls[id].arrow.style.transform = n.expanded ? 'rotate(90deg)' : 'rotate(0deg)';
+    nodeEls[id].arrow.style.transformOrigin = '-14px 0px';
+    if (reduceMotion) applyStatic(); else animateToLayout();
+  }
+
+  // ---- legend ----
+  const legendWrap = document.getElementById('legend');
+  Object.keys(branches).forEach(cat => {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.innerHTML = `<span class="sw" style="background:var(--${cat})"></span>${branches[cat].name}`;
+    legendWrap.appendChild(chip);
+  });
+
+  // ---- live preview mockup ----
+  const pv = document.getElementById('preview');
+  function pel(tag, attrs){
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  const pvRects = {};
+  function addPv(id, x, y, w, h){
+    const r = pel('rect', { class:'pv-rect', 'data-id':id, x, y, width:w, height:h, rx:2 });
+    pv.appendChild(r);
+    if (!pvRects[id]) pvRects[id] = [];
+    pvRects[id].push(r);
+  }
+  // outer shell outline stands in for root + layout
+  const outline = pel('rect', { class:'pv-outline', x:2, y:2, width:276, height:188, rx:6 });
+  pv.appendChild(outline);
+  pvRects['root'] = [outline]; pvRects['layout'] = [outline];
+
+  addPv('header', 4, 4, 272, 18);
+  addPv('logo', 8, 8, 26, 10);
+  addPv('navmenu', 40, 8, 90, 10);
+  addPv('usermenu', 236, 8, 36, 10);
+
+  addPv('sidebar', 4, 26, 54, 140);
+  addPv('navlink', 8, 32, 46, 8);
+  addPv('navlink', 8, 44, 46, 8);
+  addPv('navlink', 8, 56, 46, 8);
+  addPv('collapsetoggle', 8, 150, 46, 10);
+
+  addPv('main', 62, 26, 214, 140);
+  addPv('pageheader', 66, 30, 206, 14);
+  addPv('statsrow', 66, 48, 206, 22);
+  addPv('statcard', 66, 51, 46, 18);
+  addPv('statcard', 118, 51, 46, 18);
+  addPv('statcard', 170, 51, 46, 18);
+  addPv('statcard', 222, 51, 46, 18);
+  addPv('chartpanel', 66, 74, 206, 44);
+  addPv('linechart', 66, 78, 160, 36);
+  addPv('chartlegend', 230, 78, 38, 36);
+  addPv('datatable', 66, 122, 206, 44);
+  addPv('tablehead', 66, 126, 206, 6);
+  addPv('tablerow', 66, 134, 206, 3);
+  addPv('tablerow', 66, 139, 206, 3);
+  addPv('tablerow', 66, 144, 206, 3);
+  addPv('pagination', 66, 158, 206, 8);
+
+  addPv('footer', 4, 172, 272, 16);
+  addPv('copyright', 8, 176, 70, 6);
+  addPv('sociallinks', 246, 176, 26, 6);
+
+  function highlightPreview(id){
+    Object.keys(pvRects).forEach(k => {
+      pvRects[k].forEach(r => { r.classList.remove('hl'); r.classList.remove('ancestor'); });
+    });
+    if (!id) return;
+    let cur = nodeById[id];
+    const ancestors = [];
+    while (cur && cur.parent){ ancestors.push(cur.parent); cur = nodeById[cur.parent]; }
+    (pvRects[id] || []).forEach(r => r.classList.add('hl'));
+    ancestors.forEach(aid => { (pvRects[aid] || []).forEach(r => r.classList.add('ancestor')); });
+  }
+
+  // ---- selection / inspector ----
+  let selected = null;
+  const panel = document.getElementById('panel');
+
+  function ancestryChain(id){
+    const chain = [];
+    let cur = nodeById[id];
+    while (cur){ chain.unshift(cur); cur = cur.parent ? nodeById[cur.parent] : null; }
+    return chain;
+  }
+
+  function selectNode(id){
+    selected = id;
+    Object.values(nodeEls).forEach(ne => ne.row.classList.remove('selected'));
+    nodeEls[id].row.classList.add('selected');
+    highlightPreview(id);
+
+    const n = nodeById[id];
+    const chain = ancestryChain(id);
+    const crumbHtml = chain.map((c, i) => {
+      if (i === chain.length-1) return `<span class="current">${c.label}</span>`;
+      return `<span class="crumb" data-jump="${c.id}">${c.label}</span><span class="sep">›</span>`;
+    }).join('');
+
+    let childrenHtml = '';
+    if (n.children.length){
+      childrenHtml = `<div class="panel-sec-title">Contains (${n.children.length})</div><div id="childList"></div>`;
+    } else {
+      childrenHtml = `<div class="panel-sec-title">Composition</div><div class="leaf-note">Leaf component — renders directly, no further nesting.</div>`;
+    }
+
+    panel.innerHTML = `
+      <div class="preview-wrap">
+        <div class="preview-title">Live preview</div>
+        <svg id="preview" viewBox="0 0 280 192" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <div class="breadcrumb">${crumbHtml}</div>
+      <div class="panel-kicker"><span>Component</span><span class="tag ${n.cat}">${branches[n.cat].name}</span></div>
+      <div class="panel-label">${n.label}${n.count ? ' ×'+n.count : ''}</div>
+      <p class="panel-detail">${n.desc}</p>
+      ${childrenHtml}
+    `;
+    rebindPreview();
+    highlightPreview(id);
+
+    panel.querySelectorAll('.crumb').forEach(c => {
+      c.addEventListener('click', () => selectNode(c.getAttribute('data-jump')));
+    });
+    if (n.children.length){
+      const list = panel.querySelector('#childList');
+      n.children.forEach(cid => {
+        const c = nodeById[cid];
+        const row = document.createElement('div');
+        row.className = 'child-row';
+        row.innerHTML = `<b>${c.label}${c.count ? ' ×'+c.count : ''}</b>`;
+        row.addEventListener('click', () => selectNode(cid));
+        list.appendChild(row);
+      });
+    }
+  }
+
+  function rebindPreview(){
+    // re-render the preview mockup fresh inside the newly injected panel markup
+    const container = document.getElementById('preview');
+    container.innerHTML = '';
+    Object.keys(pvRects).forEach(k => pvRects[k] = []);
+    const outline2 = pel('rect', { class:'pv-outline', x:2, y:2, width:276, height:188, rx:6 });
+    container.appendChild(outline2);
+    pvRects['root'] = [outline2]; pvRects['layout'] = [outline2];
+    const specs = [
+      ['header',4,4,272,18],['logo',8,8,26,10],['navmenu',40,8,90,10],['usermenu',236,8,36,10],
+      ['sidebar',4,26,54,140],['navlink',8,32,46,8],['navlink',8,44,46,8],['navlink',8,56,46,8],['collapsetoggle',8,150,46,10],
+      ['main',62,26,214,140],['pageheader',66,30,206,14],['statsrow',66,48,206,22],
+      ['statcard',66,51,46,18],['statcard',118,51,46,18],['statcard',170,51,46,18],['statcard',222,51,46,18],
+      ['chartpanel',66,74,206,44],['linechart',66,78,160,36],['chartlegend',230,78,38,36],
+      ['datatable',66,122,206,44],['tablehead',66,126,206,6],
+      ['tablerow',66,134,206,3],['tablerow',66,139,206,3],['tablerow',66,144,206,3],
+      ['pagination',66,158,206,8],
+      ['footer',4,172,272,16],['copyright',8,176,70,6],['sociallinks',246,176,26,6]
+    ];
+    specs.forEach(([id,x,y,w,h]) => {
+      const r = pel('rect', { class:'pv-rect', x, y, width:w, height:h, rx:2 });
+      container.appendChild(r);
+      if (!pvRects[id]) pvRects[id] = [];
+      pvRects[id].push(r);
+    });
+  }
+
+  function selectNothing(){
+    selected = null;
+    Object.values(nodeEls).forEach(ne => ne.row.classList.remove('selected'));
+    panel.innerHTML = `
+      <div class="preview-wrap">
+        <div class="preview-title">Live preview</div>
+        <svg id="preview" viewBox="0 0 280 192" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+      <div class="panel-empty">Click any component in the tree to see where it lives in the page and how it's nested.</div>
+    `;
+    rebindPreview();
+  }
+
+  // ---- controls ----
+  document.getElementById('btnExpandAll').addEventListener('click', () => {
+    nodesRaw.forEach(n => n.expanded = true);
+    Object.values(nodeEls).forEach(ne => { if (ne.arrow) ne.arrow.style.transform = 'rotate(90deg)'; });
+    if (reduceMotion) applyStatic(); else animateToLayout();
+  });
+  document.getElementById('btnCollapseAll').addEventListener('click', () => {
+    nodesRaw.forEach(n => { n.expanded = (n.id === 'root' || n.id === 'layout'); });
+    Object.values(nodeEls).forEach(ne => { if (ne.arrow) ne.arrow.style.transform = 'rotate(0deg)'; });
+    nodeEls['root'].arrow.style.transform = 'rotate(90deg)';
+    nodeEls['layout'].arrow.style.transform = 'rotate(90deg)';
+    if (reduceMotion) applyStatic(); else animateToLayout();
+  });
+  document.getElementById('btnReset').addEventListener('click', () => {
+    nodesRaw.forEach(n => n.expanded = true);
+    Object.values(nodeEls).forEach(ne => { if (ne.arrow) ne.arrow.style.transform = 'rotate(90deg)'; });
+    selectNothing();
+    if (reduceMotion) applyStatic(); else animateToLayout();
+  });
+  window.addEventListener('keydown', (e) => { if (e.key === 'Escape') selectNothing(); });
+
+  // ---- init ----
+  nodesRaw.forEach(n => { if (n.children.length && nodeEls[n.id].arrow) nodeEls[n.id].arrow.style.transform = 'rotate(90deg)'; });
+  applyStatic();
+})();
+</script>
+</body>
+</html>

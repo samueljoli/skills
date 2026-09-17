@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Data Pipeline — From Raw Events to Insight</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0e1320;
+    --bg-grid: #131a2b;
+    --panel: #141b2c;
+    --panel-border: #253055;
+    --pipe: #202a45;
+    --pipe-hi: #303e66;
+    --text: #eceff6;
+    --text-muted: #8792ac;
+    --slate: #93a0c2; --slate-dim: #445070;
+    --amber: #e8a33d; --amber-dim: #7a5c2a;
+    --teal: #5fd4c4;  --teal-dim: #2f6a62;
+    --violet: #b09bf7; --violet-dim: #55467e;
+    --rose: #e8798a;  --rose-dim: #7a4451;
+    --mono: 'IBM Plex Mono', monospace;
+    --display: 'Space Grotesk', sans-serif;
+    --body: 'Inter', sans-serif;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:
+      radial-gradient(1200px 600px at 12% -10%, #17203a 0%, transparent 60%),
+      radial-gradient(900px 500px at 100% 10%, #16233a 0%, transparent 55%),
+      var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    min-height: 100vh;
+  }
+  .app{ max-width: 1220px; margin: 0 auto; padding: 32px 20px 60px; }
+  header.top{ margin-bottom: 16px; }
+  .eyebrow{
+    font-family: var(--mono); font-size: 11px; letter-spacing: .14em;
+    color: var(--amber); text-transform: uppercase;
+    display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+  }
+  .eyebrow::before{
+    content:""; width:7px; height:7px; border-radius:50%;
+    background: var(--amber); box-shadow: 0 0 8px 1px var(--amber);
+    animation: blink 1.6s ease-in-out infinite;
+  }
+  @keyframes blink{ 0%,100%{opacity:1} 50%{opacity:.25} }
+  h1{
+    font-family: var(--display); font-weight: 600;
+    font-size: clamp(22px, 3vw, 32px); margin: 0 0 8px; letter-spacing: -0.01em;
+  }
+  .sub{ color: var(--text-muted); font-size: 14px; max-width: 700px; line-height: 1.5; margin: 0 0 14px; }
+
+  .legend{ display:flex; gap:8px; flex-wrap:wrap; }
+  .chip{
+    font-family: var(--mono); font-size: 11px; color: var(--text);
+    background: #1b2438; border: 1px solid var(--panel-border); border-radius: 999px;
+    padding: 5px 12px 5px 9px; display:flex; align-items:center; gap:7px; cursor: pointer;
+    transition: opacity .2s ease, border-color .2s ease;
+  }
+  .chip:hover{ border-color: var(--pipe-hi); }
+  .chip .sw{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .chip.off{ opacity: .35; }
+
+  .layout{
+    display: grid; grid-template-columns: 1fr 300px; gap: 18px;
+    margin-top: 18px; align-items: start;
+  }
+  @media (max-width: 980px){ .layout{ grid-template-columns: 1fr; } }
+
+  .stage{
+    background: linear-gradient(180deg, var(--panel), #101728);
+    border: 1px solid var(--panel-border); border-radius: 14px;
+    padding: 8px; overflow: auto; position: relative;
+  }
+  .stage::before{
+    content:""; position:absolute; inset:0;
+    background-image:
+      linear-gradient(var(--bg-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px);
+    background-size: 32px 32px; opacity: .35; pointer-events: none;
+  }
+  svg#diagram{ position: relative; width: 100%; min-width: 760px; height: auto; display: block; }
+
+  .pipe-outer{ fill:none; stroke: var(--pipe); stroke-width: 11; stroke-linecap: round; transition: stroke .25s ease, opacity .25s ease; }
+  .pipe-inner{ fill:none; stroke: var(--pipe-hi); stroke-width: 3; stroke-linecap: round; opacity:.55; transition: opacity .25s ease; }
+  .pipe-outer.active{ stroke: var(--pipe-hi); }
+  .pipe-hit{ fill:none; stroke: transparent; stroke-width: 20; cursor: pointer; }
+
+  .particle{ pointer-events:none; }
+
+  .node{ cursor: pointer; }
+  .node rect{ fill: #182238; stroke-width: 1.8; rx: 14; transition: filter .25s ease, stroke .25s ease, opacity .25s ease; }
+  .node text{ font-family: var(--body); font-weight: 600; font-size: 12px; fill: var(--text); text-anchor: middle; pointer-events:none; }
+  .node .node-cat{ font-family: var(--mono); font-size: 8.5px; letter-spacing: .06em; text-transform: uppercase; text-anchor: middle; pointer-events:none; }
+  .node.slate rect{ stroke: var(--slate-dim); } .node.slate .node-cat{ fill: var(--slate); }
+  .node.amber rect{ stroke: var(--amber-dim); } .node.amber .node-cat{ fill: var(--amber); }
+  .node.teal rect{ stroke: var(--teal-dim); } .node.teal .node-cat{ fill: var(--teal); }
+  .node.violet rect{ stroke: var(--violet-dim); } .node.violet .node-cat{ fill: var(--violet); }
+  .node.rose rect{ stroke: var(--rose-dim); } .node.rose .node-cat{ fill: var(--rose); }
+  .node.pulse.slate rect{ filter: drop-shadow(0 0 12px rgba(147,160,194,.7)); stroke: var(--slate); }
+  .node.pulse.amber rect{ filter: drop-shadow(0 0 12px rgba(232,163,61,.7)); stroke: var(--amber); }
+  .node.pulse.teal rect{ filter: drop-shadow(0 0 12px rgba(95,212,196,.7)); stroke: var(--teal); }
+  .node.pulse.violet rect{ filter: drop-shadow(0 0 12px rgba(176,155,247,.7)); stroke: var(--violet); }
+  .node.pulse.rose rect{ filter: drop-shadow(0 0 12px rgba(232,121,138,.7)); stroke: var(--rose); }
+  .node.selected rect{ stroke-width: 2.6; }
+  .node.muted rect{ opacity: .25; }
+  .node.muted text, .node.muted .node-cat{ opacity: .3; }
+
+  .counter{
+    font-family: var(--mono); font-size: 10px; fill: var(--text-muted); text-anchor: middle;
+  }
+  .counter tspan{ fill: var(--text); font-weight: 600; }
+
+  .panel{
+    background: linear-gradient(180deg, var(--panel), #101728);
+    border: 1px solid var(--panel-border); border-radius: 14px;
+    padding: 18px; position: sticky; top: 20px; min-height: 360px;
+  }
+  .panel-kicker{
+    font-family: var(--mono); font-size: 10.5px; color: var(--text-muted);
+    letter-spacing: .08em; text-transform: uppercase; margin-bottom: 8px;
+    display:flex; justify-content: space-between; align-items:center;
+  }
+  .panel-kicker span.tag{ padding: 1px 8px; border-radius: 999px; font-size: 9.5px; letter-spacing: .06em; }
+  .tag.slate{ color: var(--slate); background: rgba(147,160,194,.12); border:1px solid var(--slate-dim); }
+  .tag.amber{ color: var(--amber); background: rgba(232,163,61,.12); border:1px solid var(--amber-dim); }
+  .tag.teal{ color: var(--teal); background: rgba(95,212,196,.12); border:1px solid var(--teal-dim); }
+  .tag.violet{ color: var(--violet); background: rgba(176,155,247,.12); border:1px solid var(--violet-dim); }
+  .tag.rose{ color: var(--rose); background: rgba(232,121,138,.12); border:1px solid var(--rose-dim); }
+
+  .panel-label{ font-family: var(--display); font-weight: 600; font-size: 18px; margin: 2px 0 8px; }
+  .panel-detail{ font-size: 13px; color: var(--text-muted); line-height: 1.55; margin: 0 0 12px; }
+  .panel-sec-title{
+    font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--text-muted); margin: 12px 0 6px;
+  }
+  .panel-payload{
+    font-family: var(--mono); font-size: 11px; color: #c9d3ee;
+    background: #0c1220; border: 1px solid var(--panel-border); border-radius: 8px;
+    padding: 9px 11px; white-space: pre-wrap; word-break: break-word; line-height: 1.5;
+  }
+  .xform-arrow{ text-align:center; color: var(--text-muted); font-family: var(--mono); font-size: 11px; margin: 6px 0; }
+  .panel-empty{ font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+  .panel-empty strong{ color: var(--text); }
+
+  .controls{
+    margin-top: 18px; background: rgba(20,27,44,.9); backdrop-filter: blur(8px);
+    border: 1px solid var(--panel-border); border-radius: 14px; padding: 12px 14px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .ctrl-btn{
+    font-family: var(--body); font-weight: 600; font-size: 13px; color: var(--text);
+    background: #1b2438; border: 1px solid var(--panel-border); border-radius: 9px;
+    padding: 8px 13px; cursor: pointer; display: flex; align-items: center; gap: 6px;
+    transition: background .2s ease, border-color .2s ease, transform .08s ease;
+  }
+  .ctrl-btn:hover{ background: #22304e; border-color: var(--pipe-hi); }
+  .ctrl-btn:active{ transform: scale(.96); }
+  .ctrl-btn.primary{ background: linear-gradient(180deg, #e8a33d, #cf8827); color: #1a1305; border-color: transparent; }
+  .ctrl-btn.primary:hover{ filter: brightness(1.06); }
+  .speed{ display:flex; align-items:center; gap: 8px; font-family: var(--mono); font-size: 11px; color: var(--text-muted); margin-left: auto; }
+  .speed input[type=range]{ accent-color: var(--amber); width: 100px; }
+
+  @media (prefers-reduced-motion: reduce){ .eyebrow::before{ animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="eyebrow">Data-Flow · Pipeline Diagram</div>
+    <h1>From Raw Events to Insight</h1>
+    <p class="sub">A single click event travels through ten stages, changing shape at each one — raw JSON becomes a typed record, gets enriched, and splits into a fast streaming path and a slower batch path that both end in something a human can read. Click any stage or pipe to see the data before and after.</p>
+    <div class="legend" id="legend"></div>
+  </header>
+
+  <div class="layout">
+    <div class="stage">
+      <svg id="diagram" viewBox="0 0 1300 520" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+
+    <div class="panel" id="panel">
+      <div class="panel-empty">Click any stage to see the shape of its data, or a pipe to see the transformation between two stages. Press <strong>Play</strong> to watch events flow continuously.</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="ctrl-btn primary" id="btnPlay">▶ Play flow</button>
+    <button class="ctrl-btn" id="btnSend">＋ Send one record</button>
+    <button class="ctrl-btn" id="btnReset">⟲ Reset</button>
+    <div class="speed">
+      <span>Speed</span>
+      <input type="range" id="speed" min="0.5" max="2.5" step="0.5" value="1">
+      <span id="speedVal">1×</span>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const NS = "http://www.w3.org/2000/svg";
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const categories = {
+    slate:  { name:'Ingestion' },
+    amber:  { name:'Processing' },
+    teal:   { name:'Streaming' },
+    violet: { name:'Storage & Modeling' },
+    rose:   { name:'Insight' }
+  };
+
+  const NODE_W = 132, NODE_H = 58;
+
+  const nodesMeta = {
+    raw:        { label:'Raw Events',        cat:'slate', x:90,  y:270,
+                  desc:'The browser fires a minified JSON blob for every click, scroll, and page view — no validation, no structure guarantee.',
+                  sample:'{"e":"click","t":1756202123,"el":"#buy-btn"}' },
+    ingest:     { label:'Ingestion Queue',    cat:'slate', x:250, y:270,
+                  desc:'A durable, ordered log (e.g. Kafka) receives the raw event so nothing is lost even if downstream systems are slow or down.',
+                  sample:'{"partition":3,"offset":88291,\n "key":"sess_9f2",\n "value":"{\\"e\\":\\"click\\",...}"}' },
+    validate:   { label:'Validate & Parse',   cat:'amber', x:410, y:270,
+                  desc:'Malformed events are dropped; the rest are parsed into a typed schema with real field names and an ISO timestamp.',
+                  sample:'{ event: "click",\n  timestamp: "2026-08-26T10:15:23Z",\n  element: "#buy-btn" }' },
+    enrich:     { label:'Enrich',             cat:'amber', x:570, y:270,
+                  desc:'The record is joined against reference data — who the user is, where they are, what device they\u2019re on — then forks down two paths at once.',
+                  sample:'{ ...parsed, user_id:"u_5521",\n  country:"US", device:"mobile",\n  session_id:"sess_9f2" }' },
+    stream_agg: { label:'Stream Aggregation', cat:'teal',  x:760, y:130,
+                  desc:'A windowed operator counts events in small rolling time buckets, trading completeness for sub-second latency.',
+                  sample:'{ window:"10:15:00\u201310:15:10",\n  clicks:842, unique_users:311 }' },
+    live_dash:  { label:'Live Dashboard',     cat:'rose',  x:950, y:130,
+                  desc:'Aggregated windows push straight to a real-time chart. Numbers here are approximate but always current.',
+                  sample:'"842 clicks / 10s"\nupdating live \u25CF' },
+    batch_load: { label:'Batch Load',         cat:'violet',x:760, y:400,
+                  desc:'Enriched records are buffered and written in bulk on a schedule — slower, but exactly-once and easy to reprocess.',
+                  sample:'{ ...enriched,\n  _loaded_at:"2026-08-26T11:00:00Z",\n  _batch_id:"b_20260826_11" }' },
+    warehouse:  { label:'Data Warehouse',     cat:'violet',x:950, y:400,
+                  desc:'A columnar table holds every enriched event, raw and untouched, as the permanent source of truth.',
+                  sample:'events_raw(id, event, ts, user_id,\n  country, session_id, device)\n\u2248 2.4M rows / day' },
+    transform:  { label:'Transform (dbt)',    cat:'violet',x:1120,y:400,
+                  desc:'SQL models roll individual events up into something analysts actually query — sessions, not clicks.',
+                  sample:'fct_sessions(session_id, user_id,\n  country, device, session_start,\n  session_end, pageviews, conversions)' },
+    bi_dash:    { label:'BI Dashboard',       cat:'rose',  x:1220,y:130,
+                  desc:'Modeled tables feed scheduled reports and charts that stakeholders actually read.',
+                  sample:'"Conversion rate by country"\nrefreshed daily at 06:00' }
+  };
+
+  const edges = [
+    { from:'raw',        to:'ingest',     note:'Appended to a durable, ordered log with partition + offset metadata.' },
+    { from:'ingest',     to:'validate',   note:'Parsed from a raw string into a typed record; malformed events are dropped here.' },
+    { from:'validate',   to:'enrich',     note:'Joined against user, geo, and session lookup tables.' },
+    { from:'enrich',     to:'stream_agg', note:'Fed into a rolling time-window aggregator (real-time path).' },
+    { from:'enrich',     to:'batch_load', note:'Buffered for scheduled bulk write (batch path) — the same event, a different route.' },
+    { from:'stream_agg', to:'live_dash',  note:'Window results pushed straight to a live-updating chart.' },
+    { from:'batch_load', to:'warehouse',  note:'Committed to permanent columnar storage.' },
+    { from:'warehouse',  to:'transform',  note:'Rolled up from individual events into session-level SQL models.' },
+    { from:'transform',  to:'bi_dash',    note:'Modeled tables rendered into scheduled reports.' }
+  ];
+
+  const outgoing = {};
+  Object.keys(nodesMeta).forEach(id => outgoing[id] = []);
+  edges.forEach((e, i) => outgoing[e.from].push(i));
+
+  const terminals = new Set(['live_dash', 'bi_dash']);
+  const counters = { live_dash: 0, warehouse: 0, bi_dash: 0 };
+
+  // ---- svg scaffold ----
+  const svg = document.getElementById('diagram');
+  function el(tag, attrs){
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+  const pipeLayer = el('g', {});
+  const particleLayer = el('g', {});
+  const nodeLayer = el('g', {});
+  svg.appendChild(pipeLayer); svg.appendChild(particleLayer); svg.appendChild(nodeLayer);
+
+  function trimPoint(cx, cy, ux, uy){
+    const a = NODE_W/2, b = NODE_H/2;
+    const denom = Math.sqrt((ux/a)**2 + (uy/b)**2) || 1;
+    const r = 1/denom;
+    return { x: cx+ux*r, y: cy+uy*r };
+  }
+
+  const edgeGeom = edges.map(e => {
+    const A = nodesMeta[e.from], B = nodesMeta[e.to];
+    const dx = B.x-A.x, dy = B.y-A.y;
+    const dist = Math.max(1, Math.hypot(dx,dy));
+    const ux = dx/dist, uy = dy/dist;
+    const p0 = trimPoint(A.x, A.y, ux, uy);
+    const p1 = trimPoint(B.x, B.y, -ux, -uy);
+    return { p0, p1 };
+  });
+
+  const edgeEls = edges.map((e, i) => {
+    const g = el('g', { class:'edge' });
+    const outer = el('line', { class:'pipe-outer', x1:edgeGeom[i].p0.x, y1:edgeGeom[i].p0.y, x2:edgeGeom[i].p1.x, y2:edgeGeom[i].p1.y });
+    const inner = el('line', { class:'pipe-inner', x1:edgeGeom[i].p0.x, y1:edgeGeom[i].p0.y, x2:edgeGeom[i].p1.x, y2:edgeGeom[i].p1.y });
+    const hit = el('line', { class:'pipe-hit', x1:edgeGeom[i].p0.x, y1:edgeGeom[i].p0.y, x2:edgeGeom[i].p1.x, y2:edgeGeom[i].p1.y });
+    g.appendChild(outer); g.appendChild(inner); g.appendChild(hit);
+    pipeLayer.appendChild(g);
+    hit.addEventListener('click', (ev) => { ev.stopPropagation(); selectEdge(i); });
+    return { outer, inner, hit };
+  });
+
+  const nodeEls = {};
+  Object.keys(nodesMeta).forEach(id => {
+    const m = nodesMeta[id];
+    const g = el('g', { class:'node ' + m.cat, id:'n-'+id, transform:`translate(${m.x},${m.y})` });
+    g.appendChild(el('rect', { x:-NODE_W/2, y:-NODE_H/2, width:NODE_W, height:NODE_H }));
+    const title = el('text', { x:0, y:-2 });
+    title.textContent = m.label;
+    g.appendChild(title);
+    const cat = el('text', { class:'node-cat', x:0, y:16 });
+    cat.textContent = categories[m.cat].name;
+    g.appendChild(cat);
+    if (counters.hasOwnProperty(id)){
+      const c = el('text', { class:'counter', x:0, y: NODE_H/2 + 16 });
+      c.innerHTML = `processed: <tspan id="cnt-${id}">0</tspan>`;
+      g.appendChild(c);
+    }
+    g.addEventListener('click', (ev) => { ev.stopPropagation(); selectNode(id); });
+    nodeLayer.appendChild(g);
+    nodeEls[id] = g;
+  });
+
+  svg.addEventListener('click', () => selectNode(null));
+
+  // ---- legend / phase focus ----
+  const activePhase = { current:null };
+  const legendWrap = document.getElementById('legend');
+  Object.keys(categories).forEach(cat => {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.innerHTML = `<span class="sw" style="background:var(--${cat})"></span>${categories[cat].name}`;
+    chip.addEventListener('click', () => {
+      activePhase.current = activePhase.current === cat ? null : cat;
+      document.querySelectorAll('.chip').forEach(c => c.classList.remove('off'));
+      if (activePhase.current){
+        document.querySelectorAll('.chip').forEach(c => { if (!c.textContent.includes(categories[cat].name)) c.classList.add('off'); });
+      }
+      applyPhaseFocus();
+    });
+    legendWrap.appendChild(chip);
+  });
+
+  function applyPhaseFocus(){
+    const phase = activePhase.current;
+    Object.keys(nodesMeta).forEach(id => {
+      nodeEls[id].classList.toggle('muted', !!phase && nodesMeta[id].cat !== phase);
+    });
+    edges.forEach((e, i) => {
+      const dim = !!phase && nodesMeta[e.from].cat !== phase && nodesMeta[e.to].cat !== phase;
+      edgeEls[i].outer.style.opacity = dim ? 0.25 : 1;
+      edgeEls[i].inner.style.opacity = dim ? 0.15 : 0.55;
+    });
+  }
+
+  // ---- selection / inspector ----
+  let selected = null; // {type:'node'|'edge', id}
+  const panel = document.getElementById('panel');
+
+  function clearSelectionStyles(){
+    Object.values(nodeEls).forEach(g => g.classList.remove('selected'));
+  }
+
+  function selectNode(id){
+    clearSelectionStyles();
+    if (!id){ selected = null; renderPanelEmpty(); return; }
+    selected = { type:'node', id };
+    nodeEls[id].classList.add('selected');
+    const m = nodesMeta[id];
+    panel.innerHTML = `
+      <div class="panel-kicker"><span>Stage</span><span class="tag ${m.cat}">${categories[m.cat].name}</span></div>
+      <div class="panel-label">${m.label}</div>
+      <p class="panel-detail">${m.desc}</p>
+      <div class="panel-sec-title">Data at this stage</div>
+      <div class="panel-payload">${escapeHtml(m.sample)}</div>
+    `;
+  }
+
+  function selectEdge(i){
+    clearSelectionStyles();
+    selected = { type:'edge', id:i };
+    const e = edges[i];
+    const A = nodesMeta[e.from], B = nodesMeta[e.to];
+    panel.innerHTML = `
+      <div class="panel-kicker"><span>Transformation</span><span class="tag ${B.cat}">${categories[B.cat].name}</span></div>
+      <div class="panel-label">${A.label} → ${B.label}</div>
+      <p class="panel-detail">${e.note}</p>
+      <div class="panel-sec-title">Before</div>
+      <div class="panel-payload">${escapeHtml(A.sample)}</div>
+      <div class="xform-arrow">↓ transforms into ↓</div>
+      <div class="panel-sec-title">After</div>
+      <div class="panel-payload">${escapeHtml(B.sample)}</div>
+    `;
+  }
+
+  function renderPanelEmpty(){
+    panel.innerHTML = `<div class="panel-empty">Click any stage to see the shape of its data, or a pipe to see the transformation between two stages. Press <strong>Play</strong> to watch events flow continuously.</div>`;
+  }
+
+  function escapeHtml(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ---- particle simulation ----
+  let particles = []; // { edgeIndex, startTime, dur }
+  let playing = false;
+  let speed = 1;
+  let lastSpawn = 0;
+  let loopRunning = false;
+
+  function spawnAt(edgeIndex){
+    particles.push({ edgeIndex, startTime: performance.now(), dur: Math.max(500, 1300/speed) });
+    ensureLoop();
+  }
+
+  function pulseNode(id){
+    const g = nodeEls[id];
+    g.classList.add('pulse');
+    setTimeout(() => g.classList.remove('pulse'), 420);
+  }
+
+  function bumpCounter(id){
+    if (!counters.hasOwnProperty(id)) return;
+    counters[id]++;
+    const el2 = document.getElementById('cnt-'+id);
+    if (el2) el2.textContent = counters[id];
+  }
+
+  function ensureLoop(){ if (!loopRunning){ loopRunning = true; requestAnimationFrame(frame); } }
+
+  function frame(now){
+    if (playing){
+      const interval = Math.max(220, 900/speed);
+      if (now - lastSpawn > interval){
+        lastSpawn = now;
+        spawnAt(0);
+      }
+    }
+
+    const stillActive = [];
+    for (const p of particles){
+      const t = Math.min(1, (now - p.startTime) / p.dur);
+      const geom = edgeGeom[p.edgeIndex];
+      const x = geom.p0.x + (geom.p1.x - geom.p0.x) * t;
+      const y = geom.p0.y + (geom.p1.y - geom.p0.y) * t;
+      const toId = edges[p.edgeIndex].to;
+      const cat = nodesMeta[toId].cat;
+      renderParticle(p, x, y, cat);
+
+      if (t >= 1){
+        pulseNode(toId);
+        bumpCounter(toId);
+        const nexts = outgoing[toId];
+        if (nexts.length === 0){
+          releaseParticle(p);
+        } else if (nexts.length === 1){
+          p.edgeIndex = nexts[0]; p.startTime = now; p.dur = Math.max(500, 1300/speed);
+          stillActive.push(p);
+        } else {
+          nexts.forEach(ni => {
+            particles.push({ edgeIndex: ni, startTime: now, dur: Math.max(500, 1300/speed) });
+          });
+          releaseParticle(p);
+        }
+      } else {
+        stillActive.push(p);
+      }
+    }
+    particles = stillActive;
+
+    if (playing || particles.length > 0){
+      requestAnimationFrame(frame);
+    } else {
+      loopRunning = false;
+    }
+  }
+
+  const particlePool = [];
+  function renderParticle(p, x, y, cat){
+    if (!p.el){
+      p.el = el('circle', { class:'particle', r:5.5 });
+      particleLayer.appendChild(p.el);
+    }
+    p.el.setAttribute('cx', x);
+    p.el.setAttribute('cy', y);
+    p.el.setAttribute('fill', 'var(--'+cat+')');
+    p.el.style.filter = 'drop-shadow(0 0 5px var(--'+cat+'))';
+  }
+  function releaseParticle(p){
+    if (p.el && p.el.parentNode) p.el.parentNode.removeChild(p.el);
+  }
+
+  // ---- controls ----
+  const btnPlay = document.getElementById('btnPlay');
+  const btnSend = document.getElementById('btnSend');
+  const btnReset = document.getElementById('btnReset');
+  const speedInput = document.getElementById('speed');
+  const speedVal = document.getElementById('speedVal');
+
+  btnPlay.addEventListener('click', () => {
+    playing = !playing;
+    btnPlay.textContent = playing ? '⏸ Pause flow' : '▶ Play flow';
+    lastSpawn = 0;
+    ensureLoop();
+  });
+  btnSend.addEventListener('click', () => spawnAt(0));
+  btnReset.addEventListener('click', () => {
+    playing = false;
+    btnPlay.textContent = '▶ Play flow';
+    particles.forEach(releaseParticle);
+    particles = [];
+    Object.keys(counters).forEach(k => { counters[k] = 0; const e2 = document.getElementById('cnt-'+k); if (e2) e2.textContent = '0'; });
+    selectNode(null);
+    activePhase.current = null;
+    document.querySelectorAll('.chip').forEach(c => c.classList.remove('off'));
+    applyPhaseFocus();
+  });
+  speedInput.addEventListener('input', () => {
+    speed = parseFloat(speedInput.value);
+    speedVal.textContent = speed + '×';
+  });
+
+  // ---- init ----
+  if (!reduceMotion){
+    setTimeout(() => spawnAt(0), 500);
+  }
+})();
+</script>
+</body>
+</html>

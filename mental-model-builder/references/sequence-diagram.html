@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Sequence Diagram — Authorization Code Flow</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0e1320;
+    --bg-grid: #131a2b;
+    --panel: #141b2c;
+    --panel-border: #253055;
+    --lifeline: #2a3454;
+    --lifeline-lit: #7c8ac2;
+    --text: #eceff6;
+    --text-muted: #8792ac;
+    --amber: #e8a33d;
+    --amber-dim: #7a5c2a;
+    --teal: #5fd4c4;
+    --teal-dim: #2f6a62;
+    --rose: #e8798a;
+    --rose-dim: #7a4451;
+    --mono: 'IBM Plex Mono', monospace;
+    --display: 'Space Grotesk', sans-serif;
+    --body: 'Inter', sans-serif;
+    --row-h: 54px;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:
+      radial-gradient(1200px 600px at 12% -10%, #17203a 0%, transparent 60%),
+      radial-gradient(900px 500px at 100% 10%, #16233a 0%, transparent 55%),
+      var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    min-height: 100vh;
+  }
+  .app{
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 32px 20px 96px;
+  }
+  header.top{
+    margin-bottom: 22px;
+  }
+  .eyebrow{
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: .14em;
+    color: var(--amber);
+    text-transform: uppercase;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .eyebrow::before{
+    content:"";
+    width:7px; height:7px; border-radius:50%;
+    background: var(--amber);
+    box-shadow: 0 0 8px 1px var(--amber);
+    animation: blink 1.6s ease-in-out infinite;
+  }
+  @keyframes blink{ 0%,100%{opacity:1} 50%{opacity:.25} }
+  h1{
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: clamp(22px, 3vw, 32px);
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+  .sub{
+    color: var(--text-muted);
+    font-size: 14px;
+    max-width: 640px;
+    line-height: 1.5;
+    margin: 0;
+  }
+
+  .layout{
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 18px;
+    margin-top: 26px;
+    align-items: start;
+  }
+  @media (max-width: 900px){
+    .layout{ grid-template-columns: 1fr; }
+  }
+
+  .stage{
+    background: linear-gradient(180deg, var(--panel), #101728);
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    padding: 10px 6px 4px;
+    overflow: hidden;
+    position: relative;
+  }
+  .stage::before{
+    content:"";
+    position:absolute; inset:0;
+    background-image:
+      linear-gradient(var(--bg-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px);
+    background-size: 32px 32px;
+    opacity: .35;
+    pointer-events: none;
+  }
+  svg#diagram{
+    position: relative;
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+
+  .actor-box rect{
+    fill: #182238;
+    stroke: var(--lifeline);
+    stroke-width: 1.3;
+    transition: stroke .3s ease, filter .3s ease;
+  }
+  .actor-box.lit rect{
+    stroke: var(--lifeline-lit);
+    filter: drop-shadow(0 0 6px rgba(124,138,194,.55));
+  }
+  .actor-name{
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 13px;
+    fill: var(--text);
+  }
+  .actor-sub{
+    font-family: var(--mono);
+    font-size: 9.5px;
+    fill: var(--text-muted);
+    letter-spacing: .03em;
+  }
+
+  .lifeline{
+    stroke: var(--lifeline);
+    stroke-width: 1.4;
+    stroke-dasharray: 3 5;
+    transition: stroke .35s ease, filter .35s ease;
+  }
+  .lifeline.lit{
+    stroke: var(--lifeline-lit);
+    filter: drop-shadow(0 0 5px rgba(124,138,194,.65));
+  }
+  .pulse-end{
+    fill: var(--lifeline);
+    transition: fill .3s ease;
+  }
+  .pulse-end.lit{ fill: var(--lifeline-lit); }
+  .pulse-ring{
+    fill: none;
+    stroke: var(--lifeline-lit);
+    stroke-width: 1;
+    opacity: 0;
+  }
+  .pulse-ring.animate{
+    animation: ring 1.8s ease-out infinite;
+  }
+  @keyframes ring{
+    0%{ r:4; opacity:.55; }
+    100%{ r:14; opacity:0; }
+  }
+
+  .row-highlight{
+    fill: var(--lifeline-lit);
+    opacity: 0;
+    transition: opacity .35s ease;
+  }
+  .row-highlight.current{ opacity: .06; }
+
+  .msg{ opacity: 0; }
+  .msg.done{ opacity: .5; }
+  .msg.current{ opacity: 1; }
+
+  .msg-line{ stroke-width: 2; fill:none; }
+  .msg.action .msg-line{ stroke: var(--rose); }
+  .msg.req .msg-line{ stroke: var(--amber); }
+  .msg.res .msg-line{ stroke: var(--teal); }
+
+  .msg-dot{ opacity: 0; }
+  .msg.action .msg-dot{ fill: var(--rose); }
+  .msg.req .msg-dot{ fill: var(--amber); }
+  .msg.res .msg-dot{ fill: var(--teal); }
+
+  .msg-label{
+    font-family: var(--mono);
+    font-size: 11px;
+    text-anchor: middle;
+  }
+  .msg.action .msg-label{ fill: var(--rose); }
+  .msg.req .msg-label{ fill: var(--amber); }
+  .msg.res .msg-label{ fill: var(--teal); }
+
+  /* ---- side panel ---- */
+  .panel{
+    background: linear-gradient(180deg, var(--panel), #101728);
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    padding: 18px 18px 16px;
+    position: sticky;
+    top: 20px;
+  }
+  .panel-kicker{
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--text-muted);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+    display:flex; justify-content: space-between;
+  }
+  .panel-kicker span.tag{
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-size: 9.5px;
+    letter-spacing: .06em;
+  }
+  .tag.req{ color: var(--amber); background: rgba(232,163,61,.12); border:1px solid var(--amber-dim); }
+  .tag.res{ color: var(--teal); background: rgba(95,212,196,.12); border:1px solid var(--teal-dim); }
+  .tag.action{ color: var(--rose); background: rgba(232,121,138,.12); border:1px solid var(--rose-dim); }
+
+  .panel-label{
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 16px;
+    margin: 2px 0 10px;
+    min-height: 22px;
+  }
+  .panel-detail{
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.55;
+    margin: 0 0 14px;
+    min-height: 58px;
+  }
+  .panel-payload{
+    font-family: var(--mono);
+    font-size: 11.5px;
+    color: #c9d3ee;
+    background: #0c1220;
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 10px 12px;
+    white-space: pre-wrap;
+    word-break: break-word;
+    min-height: 36px;
+  }
+  .panel-empty{
+    color: var(--text-muted);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+
+  /* ---- controls ---- */
+  .controls{
+    position: sticky;
+    bottom: 18px;
+    margin-top: 18px;
+    background: rgba(20,27,44,.9);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--panel-border);
+    border-radius: 14px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .ctrl-btn{
+    font-family: var(--body);
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text);
+    background: #1b2438;
+    border: 1px solid var(--panel-border);
+    border-radius: 9px;
+    padding: 8px 13px;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+    transition: background .2s ease, border-color .2s ease, transform .08s ease;
+  }
+  .ctrl-btn:hover{ background: #22304e; border-color: var(--lifeline-lit); }
+  .ctrl-btn:active{ transform: scale(.96); }
+  .ctrl-btn:disabled{ opacity: .35; cursor: not-allowed; }
+  .ctrl-btn.primary{
+    background: linear-gradient(180deg, #e8a33d, #cf8827);
+    color: #1a1305;
+    border-color: transparent;
+  }
+  .ctrl-btn.primary:hover{ filter: brightness(1.06); }
+
+  .speed{
+    display:flex; align-items:center; gap: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-left: auto;
+  }
+  .speed input[type=range]{
+    accent-color: var(--amber);
+    width: 100px;
+  }
+
+  .progress{
+    display:flex; gap: 5px;
+    flex: 1 1 100%;
+    order: 5;
+  }
+  .progress .dot{
+    flex:1;
+    height: 5px;
+    border-radius: 3px;
+    background: var(--lifeline);
+    cursor: pointer;
+    transition: background .2s ease, transform .15s ease;
+  }
+  .progress .dot:hover{ transform: scaleY(1.4); }
+  .progress .dot.done{ background: var(--teal-dim); }
+  .progress .dot.current{ background: var(--amber); }
+
+  .kbd-hint{
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--text-muted);
+    flex-basis: 100%;
+    order: 6;
+    text-align: center;
+    margin-top: 2px;
+  }
+  .kbd-hint kbd{
+    background:#1b2438; border:1px solid var(--panel-border); border-radius:4px;
+    padding: 1px 5px; font-family: var(--mono);
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .eyebrow::before, .pulse-ring{ animation: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="eyebrow">Sequence Diagram · OAuth 2.0</div>
+    <h1>Authorization Code Flow</h1>
+    <p class="sub">Five participants, thirteen messages. Press play to watch the handshake unfold in order, or step through it manually — each message is a request (amber), a response (teal), or a user action (rose).</p>
+  </header>
+
+  <div class="layout">
+    <div class="stage">
+      <svg id="diagram" viewBox="0 0 960 850" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+
+    <div class="panel">
+      <div class="panel-kicker">
+        <span id="panelStepCount">Step — / 13</span>
+        <span id="panelTag" class="tag action" style="visibility:hidden">action</span>
+      </div>
+      <div class="panel-label" id="panelLabel">Ready when you are</div>
+      <p class="panel-detail" id="panelDetail">Press <strong>Play</strong> or hit <strong>Next</strong> to begin the flow. Each step will explain what's happening and why.</p>
+      <div class="panel-payload" id="panelPayload">—</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="ctrl-btn" id="btnRestart" title="Restart">⟲ Restart</button>
+    <button class="ctrl-btn" id="btnPrev" title="Previous step">‹ Prev</button>
+    <button class="ctrl-btn primary" id="btnPlay" title="Play / Pause">▶ Play</button>
+    <button class="ctrl-btn" id="btnNext" title="Next step">Next ›</button>
+    <div class="speed">
+      <span>Speed</span>
+      <input type="range" id="speed" min="0.5" max="2.5" step="0.5" value="1">
+      <span id="speedVal">1×</span>
+    </div>
+    <div class="progress" id="progress"></div>
+    <div class="kbd-hint">Use <kbd>←</kbd> <kbd>→</kbd> to step, <kbd>space</kbd> to play/pause, or click a bar above to jump.</div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const NS = "http://www.w3.org/2000/svg";
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  const actors = [
+    { id:'user',    name:'User',          sub:'human' },
+    { id:'browser', name:'Browser',       sub:'client' },
+    { id:'app',     name:'App Server',    sub:'your backend' },
+    { id:'auth',    name:'Auth Server',   sub:'identity provider' },
+    { id:'api',     name:'Resource API',  sub:'protected data' }
+  ];
+
+  const steps = [
+    { from:'user', to:'browser', kind:'action', label:'Click "Sign in"',
+      detail:'The user starts the flow from the app\'s UI.', payload:'user.click(#sign-in-button)' },
+    { from:'browser', to:'app', kind:'req', label:'GET /login',
+      detail:'The browser asks the app server for the login route.', payload:'GET /login HTTP/1.1' },
+    { from:'app', to:'browser', kind:'res', label:'302 → /authorize',
+      detail:'The app redirects the browser to the identity provider, attaching its client_id, redirect_uri, scope and a random state value.', payload:'302 Found\nLocation: /authorize?client_id=app_9f2&\n  redirect_uri=/callback&scope=profile&state=x7q' },
+    { from:'browser', to:'auth', kind:'req', label:'GET /authorize',
+      detail:'The browser follows the redirect and lands on the Auth Server.', payload:'GET /authorize?client_id=app_9f2&… HTTP/1.1' },
+    { from:'auth', to:'browser', kind:'res', label:'Render consent screen',
+      detail:'The Auth Server shows a login + consent screen directly to the user — the app never sees these credentials.', payload:'200 OK\n<form action="/authorize">…</form>' },
+    { from:'browser', to:'auth', kind:'req', label:'POST credentials + consent',
+      detail:'The user enters credentials and approves the requested scopes.', payload:'POST /authorize\nusername=jane&password=•••••&consent=allow' },
+    { from:'auth', to:'browser', kind:'res', label:'302 → /callback?code=xJ9f…',
+      detail:'The Auth Server issues a short-lived, single-use authorization code and redirects back to the app.', payload:'302 Found\nLocation: /callback?code=xJ9f2Ke&state=x7q' },
+    { from:'browser', to:'app', kind:'req', label:'GET /callback?code=xJ9f…',
+      detail:'The browser delivers the authorization code to the app server.', payload:'GET /callback?code=xJ9f2Ke&state=x7q' },
+    { from:'app', to:'auth', kind:'req', label:'POST /token {code, secret}',
+      detail:'The app exchanges the code for tokens directly with the Auth Server, authenticating itself with a client secret — this call never touches the browser.', payload:'POST /token\ngrant_type=authorization_code&code=xJ9f2Ke&\n  client_secret=••••••••' },
+    { from:'auth', to:'app', kind:'res', label:'200 {access_token, expires_in}',
+      detail:'The Auth Server validates the code and returns an access token (and usually a refresh token).', payload:'200 OK\n{ "access_token":"eyJhbGciOi…",\n  "expires_in":3600 }' },
+    { from:'app', to:'api', kind:'req', label:'GET /me  (Bearer token)',
+      detail:'The app calls the protected resource API, presenting the access token.', payload:'GET /me\nAuthorization: Bearer eyJhbGciOi…' },
+    { from:'api', to:'app', kind:'res', label:'200 {profile data}',
+      detail:'The API validates the token and returns the requested resource.', payload:'200 OK\n{ "name":"Jane Doe", "id":"u_5521" }' },
+    { from:'app', to:'browser', kind:'res', label:'Render dashboard',
+      detail:'The app renders the authenticated page and sends it to the browser. The flow is complete.', payload:'200 OK\n<html>…dashboard…</html>' }
+  ];
+
+  const kindName = { action:'action', req:'request', res:'response' };
+
+  // ---- layout constants ----
+  const W = 960, H = 850;
+  const marginX = 110;
+  const spacing = (W - marginX*2) / (actors.length - 1);
+  const actorX = actors.map((_, i) => marginX + i * spacing);
+  const headerY = 22, headerH = 46;
+  const lineTop = headerY + headerH + 14;
+  const lineBottom = H - 40;
+  const rowStartY = lineTop + 46;
+  const rowH = 54;
+
+  const actorIndex = {};
+  actors.forEach((a,i) => actorIndex[a.id] = i);
+
+  const svg = document.getElementById('diagram');
+  function el(tag, attrs){
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+
+  // markers
+  const defs = el('defs', {});
+  ['action','req','res'].forEach(kind => {
+    const color = kind==='action' ? 'var(--rose)' : kind==='req' ? 'var(--amber)' : 'var(--teal)';
+    const marker = el('marker', {
+      id:'arrow-'+kind, viewBox:'0 0 10 10', refX:'8', refY:'5',
+      markerWidth:'7', markerHeight:'7', orient:'auto-start-reverse'
+    });
+    marker.appendChild(el('path', { d:'M0,0 L10,5 L0,10 z', fill: color }));
+    defs.appendChild(marker);
+  });
+  svg.appendChild(defs);
+
+  // lifelines + actor headers
+  actors.forEach((a, i) => {
+    const x = actorX[i];
+
+    const box = el('g', { class:'actor-box', id:'box-'+a.id });
+    box.appendChild(el('rect', { x:x-72, y:headerY, width:144, height:headerH, rx:9 }));
+    const nameEl = el('text', { class:'actor-name', x:x, y:headerY+19, 'text-anchor':'middle' });
+    nameEl.textContent = a.name;
+    const subEl = el('text', { class:'actor-sub', x:x, y:headerY+34, 'text-anchor':'middle' });
+    subEl.textContent = a.sub;
+    box.appendChild(nameEl); box.appendChild(subEl);
+    svg.appendChild(box);
+
+    const line = el('line', { class:'lifeline', id:'line-'+a.id, x1:x, y1:lineTop, x2:x, y2:lineBottom });
+    svg.appendChild(line);
+
+    const ring = el('circle', { class:'pulse-ring', id:'ring-'+a.id, cx:x, cy:lineBottom, r:4 });
+    const end = el('circle', { class:'pulse-end', id:'end-'+a.id, cx:x, cy:lineBottom, r:3.5 });
+    svg.appendChild(ring); svg.appendChild(end);
+  });
+
+  // step rows
+  const stepEls = steps.map((s, i) => {
+    const y = rowStartY + i * rowH;
+    const x1raw = actorX[actorIndex[s.from]];
+    const x2raw = actorX[actorIndex[s.to]];
+    const dir = x2raw > x1raw ? 1 : -1;
+    const pad = 20;
+    const x1 = x1raw + (x1raw !== x2raw ? dir*pad : 0);
+    const x2 = x2raw - (x1raw !== x2raw ? dir*pad : 0);
+
+    const g = el('g', { class:'msg ' + s.kind, id:'msg-'+i });
+
+    const hi = el('rect', { class:'row-highlight', x:8, y:y-24, width:W-16, height:36, rx:8, id:'hi-'+i });
+    svg.appendChild(hi);
+
+    const len = Math.abs(x2 - x1);
+    const line = el('line', {
+      class:'msg-line', x1:x1, y1:y, x2:x2, y2:y,
+      'marker-end':'url(#arrow-'+s.kind+')',
+      'stroke-dasharray': len, 'stroke-dashoffset': len,
+      id:'line-msg-'+i
+    });
+    g.appendChild(line);
+
+    const dot = el('circle', { class:'msg-dot', r:4.5, cx:x1, cy:y, id:'dot-'+i });
+    g.appendChild(dot);
+
+    const label = el('text', { class:'msg-label', x:(x1+x2)/2, y:y-9, id:'label-'+i });
+    label.textContent = (i+1) + '.  ' + s.label;
+    g.appendChild(label);
+
+    svg.appendChild(g);
+    return { g, hi, line, dot, label, x1, x2, y, len };
+  });
+
+  // progress dots (bottom bar)
+  const progressWrap = document.getElementById('progress');
+  const progressDots = steps.map((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot';
+    d.title = 'Step ' + (i+1);
+    d.addEventListener('click', () => { stopPlaying(); jumpTo(i); });
+    progressWrap.appendChild(d);
+    return d;
+  });
+
+  // ---- state machine ----
+  let current = -1;      // last fully-shown step index
+  let animating = false;
+  let playing = false;
+  let speed = 1;
+
+  const panelStepCount = document.getElementById('panelStepCount');
+  const panelTag = document.getElementById('panelTag');
+  const panelLabel = document.getElementById('panelLabel');
+  const panelDetail = document.getElementById('panelDetail');
+  const panelPayload = document.getElementById('panelPayload');
+  const btnPlay = document.getElementById('btnPlay');
+  const btnPrev = document.getElementById('btnPrev');
+  const btnNext = document.getElementById('btnNext');
+  const btnRestart = document.getElementById('btnRestart');
+
+  function litActors(){
+    actors.forEach(a => {
+      document.getElementById('box-'+a.id).classList.remove('lit');
+      document.getElementById('line-'+a.id).classList.remove('lit');
+    });
+  }
+
+  function setLitPair(fromId, toId){
+    litActors();
+    [fromId, toId].forEach(id => {
+      document.getElementById('box-'+id).classList.add('lit');
+      document.getElementById('line-'+id).classList.add('lit');
+    });
+  }
+
+  function updatePanel(i){
+    const s = steps[i];
+    panelStepCount.textContent = 'Step ' + (i+1) + ' / ' + steps.length;
+    panelTag.style.visibility = 'visible';
+    panelTag.className = 'tag ' + s.kind;
+    panelTag.textContent = kindName[s.kind];
+    panelLabel.textContent = s.label;
+    panelDetail.textContent = s.detail;
+    panelPayload.textContent = s.payload;
+  }
+
+  function resetPanel(){
+    panelStepCount.textContent = 'Step — / ' + steps.length;
+    panelTag.style.visibility = 'hidden';
+    panelLabel.textContent = 'Ready when you are';
+    panelDetail.textContent = 'Press Play or hit Next to begin the flow. Each step will explain what\'s happening and why.';
+    panelPayload.textContent = '—';
+  }
+
+  function refreshRowStates(){
+    stepEls.forEach((se, i) => {
+      se.g.classList.remove('done','current');
+      se.hi.classList.remove('current');
+      if (i < current) { se.g.classList.add('done'); }
+      else if (i === current) { se.g.classList.add('current'); se.hi.classList.add('current'); }
+    });
+    progressDots.forEach((d, i) => {
+      d.classList.toggle('done', i < current);
+      d.classList.toggle('current', i === current);
+    });
+    btnPrev.disabled = current <= 0;
+    const atEnd = current >= steps.length - 1;
+    btnNext.disabled = atEnd && !playing;
+  }
+
+  function easeInOutCubic(t){ return t < .5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2; }
+
+  function animateStep(i){
+    return new Promise(resolve => {
+      const se = stepEls[i];
+      const s = steps[i];
+      setLitPair(s.from, s.to);
+      updatePanel(i);
+      se.g.classList.add('current');
+      se.hi.classList.add('current');
+      se.dot.style.opacity = 1;
+
+      const duration = reduceMotion ? 1 : Math.max(160, 620 / speed);
+      const start = performance.now();
+
+      function frame(now){
+        const t = Math.min(1, (now - start) / duration);
+        const eased = easeInOutCubic(t);
+        se.line.setAttribute('stroke-dashoffset', se.len * (1 - eased));
+        const cx = se.x1 + (se.x2 - se.x1) * eased;
+        se.dot.setAttribute('cx', cx);
+        se.label.style.opacity = 0.15 + eased * 0.85;
+        if (t < 1){
+          requestAnimationFrame(frame);
+        } else {
+          se.dot.style.opacity = 0;
+          se.label.style.opacity = 1;
+          resolve();
+        }
+      }
+      requestAnimationFrame(frame);
+    });
+  }
+
+  function showInstant(i, asCurrent){
+    const se = stepEls[i];
+    se.line.setAttribute('stroke-dashoffset', 0);
+    se.dot.style.opacity = 0;
+    se.label.style.opacity = 1;
+    se.g.classList.add(asCurrent ? 'current' : 'done');
+  }
+
+  function hideStep(i){
+    const se = stepEls[i];
+    se.line.setAttribute('stroke-dashoffset', se.len);
+    se.dot.style.opacity = 0;
+    se.label.style.opacity = 0;
+    se.g.classList.remove('done','current');
+    se.hi.classList.remove('current');
+  }
+
+  async function advanceOne(){
+    if (animating) return;
+    if (current >= steps.length - 1) return;
+    animating = true;
+    btnNext.disabled = true;
+    const target = current + 1;
+    await animateStep(target);
+    current = target;
+    refreshRowStates();
+    animating = false;
+    if (current >= steps.length - 1){
+      panelDetail.textContent = steps[steps.length-1].detail + '  —  Flow complete.';
+      stopPlaying();
+    }
+    btnNext.disabled = current >= steps.length - 1;
+  }
+
+  function retreatOne(){
+    if (animating || current < 0) return;
+    hideStep(current);
+    current -= 1;
+    litActors();
+    if (current >= 0){
+      const s = steps[current];
+      setLitPair(s.from, s.to);
+      updatePanel(current);
+    } else {
+      resetPanel();
+    }
+    refreshRowStates();
+  }
+
+  function jumpTo(target){
+    if (animating) return;
+    for (let i = 0; i < steps.length; i++){
+      if (i < target) showInstant(i, false);
+      else if (i === target) showInstant(i, true);
+      else hideStep(i);
+    }
+    current = target;
+    const s = steps[current];
+    setLitPair(s.from, s.to);
+    updatePanel(current);
+    refreshRowStates();
+  }
+
+  function restart(){
+    stopPlaying();
+    for (let i = 0; i < steps.length; i++) hideStep(i);
+    current = -1;
+    litActors();
+    resetPanel();
+    refreshRowStates();
+  }
+
+  async function playLoop(){
+    playing = true;
+    btnPlay.textContent = '⏸ Pause';
+    while (playing && current < steps.length - 1){
+      await advanceOne();
+      if (!playing) break;
+      await new Promise(r => setTimeout(r, Math.max(160, 500 / speed)));
+    }
+    stopPlaying();
+  }
+
+  function stopPlaying(){
+    playing = false;
+    btnPlay.textContent = '▶ Play';
+  }
+
+  // ---- wire up controls ----
+  btnPlay.addEventListener('click', () => {
+    if (playing) stopPlaying();
+    else playLoop();
+  });
+  btnNext.addEventListener('click', () => { stopPlaying(); advanceOne(); });
+  btnPrev.addEventListener('click', () => { stopPlaying(); retreatOne(); });
+  btnRestart.addEventListener('click', restart);
+
+  const speedInput = document.getElementById('speed');
+  const speedVal = document.getElementById('speedVal');
+  speedInput.addEventListener('input', () => {
+    speed = parseFloat(speedInput.value);
+    speedVal.textContent = speed + '×';
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space'){ e.preventDefault(); btnPlay.click(); }
+    else if (e.code === 'ArrowRight'){ e.preventDefault(); stopPlaying(); advanceOne(); }
+    else if (e.code === 'ArrowLeft'){ e.preventDefault(); stopPlaying(); retreatOne(); }
+  });
+
+  // ambient "alive" pulse rings on lifeline endpoints
+  if (!reduceMotion){
+    actors.forEach((a, i) => {
+      const ring = document.getElementById('ring-'+a.id);
+      ring.classList.add('animate');
+      ring.style.animationDelay = (i * 0.3) + 's';
+    });
+  }
+
+  refreshRowStates();
+})();
+</script>
+</body>
+</html>

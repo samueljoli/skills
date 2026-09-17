@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Execution Trace — Quicksort on a Real Array</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0e1320;
+    --bg-grid: #131a2b;
+    --panel: #141b2c;
+    --panel-border: #253055;
+    --line: #2a3454;
+    --line-lit: #aab4de;
+    --text: #eceff6;
+    --text-muted: #8792ac;
+    --slate: #93a0c2; --slate-dim: #445070;
+    --amber: #e8a33d; --amber-dim: #7a5c2a;
+    --teal: #5fd4c4;  --teal-dim: #2f6a62;
+    --violet: #b09bf7; --violet-dim: #55467e;
+    --rose: #e8798a;  --rose-dim: #7a4451;
+    --mono: 'IBM Plex Mono', monospace;
+    --display: 'Space Grotesk', sans-serif;
+    --body: 'Inter', sans-serif;
+  }
+  *{ box-sizing: border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:
+      radial-gradient(1200px 600px at 12% -10%, #17203a 0%, transparent 60%),
+      radial-gradient(900px 500px at 100% 10%, #16233a 0%, transparent 55%),
+      var(--bg);
+    color: var(--text);
+    font-family: var(--body);
+    min-height: 100vh;
+  }
+  .app{ max-width: 1220px; margin: 0 auto; padding: 32px 20px 60px; }
+  header.top{ margin-bottom: 16px; }
+  .eyebrow{
+    font-family: var(--mono); font-size: 11px; letter-spacing: .14em;
+    color: var(--amber); text-transform: uppercase;
+    display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+  }
+  .eyebrow::before{
+    content:""; width:7px; height:7px; border-radius:50%;
+    background: var(--amber); box-shadow: 0 0 8px 1px var(--amber);
+    animation: blink 1.6s ease-in-out infinite;
+  }
+  @keyframes blink{ 0%,100%{opacity:1} 50%{opacity:.25} }
+  h1{
+    font-family: var(--display); font-weight: 600;
+    font-size: clamp(22px, 3vw, 32px); margin: 0 0 8px; letter-spacing: -0.01em;
+  }
+  .sub{ color: var(--text-muted); font-size: 14px; max-width: 700px; line-height: 1.5; margin: 0 0 14px; }
+  .legend{ display:flex; gap:8px; flex-wrap:wrap; }
+  .chip{
+    font-family: var(--mono); font-size: 11px; color: var(--text);
+    background: #1b2438; border: 1px solid var(--panel-border); border-radius: 999px;
+    padding: 5px 12px 5px 9px; display:flex; align-items:center; gap:7px;
+  }
+  .chip .sw{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+
+  .layout{ display: grid; grid-template-columns: 1fr 320px; gap: 18px; margin-top: 18px; align-items: start; }
+  @media (max-width: 1000px){ .layout{ grid-template-columns: 1fr; } }
+
+  .stage{
+    background: linear-gradient(180deg, var(--panel), #101728);
+    border: 1px solid var(--panel-border); border-radius: 14px; padding: 16px; position: relative; overflow: hidden;
+  }
+  .stage::before{
+    content:""; position:absolute; inset:0;
+    background-image:
+      linear-gradient(var(--bg-grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--bg-grid) 1px, transparent 1px);
+    background-size: 32px 32px; opacity: .35; pointer-events: none;
+  }
+
+  .code-box{
+    position:relative; background:#0c1220; border:1px solid var(--panel-border); border-radius:10px;
+    padding: 10px 0; font-family: var(--mono); font-size: 12.5px; line-height: 1.9; overflow-x:auto;
+  }
+  .code-line{ padding: 1px 14px; white-space: pre; color: var(--text-muted); border-left:3px solid transparent; }
+  .code-line .ln{ display:inline-block; width:22px; color:#3d4869; }
+  .code-line.active{ color: var(--text); background: rgba(232,163,61,.10); border-left-color: var(--amber); }
+
+  .stage-body{ position: relative; margin-top: 18px; padding-top: 8px; overflow-x:auto; }
+  .bars-wrap{ position: relative; height: 230px; min-width: 704px; }
+  .range-shade{
+    position:absolute; top:0; height: 190px; background: rgba(170,180,222,.06);
+    border: 1px dashed var(--line); border-radius: 8px; transition: left .35s ease, width .35s ease, opacity .35s ease;
+  }
+  .bar{
+    position:absolute; bottom: 40px; width: 64px; border-radius: 6px 6px 3px 3px;
+    background: linear-gradient(180deg, #2a3454, #202a45); border: 1.5px solid var(--slate-dim);
+    transition: left .4s cubic-bezier(.4,0,.2,1), background .25s ease, border-color .25s ease, filter .25s ease;
+    display:flex; align-items:flex-start; justify-content:center; padding-top:6px;
+  }
+  .bar .val{ font-family: var(--mono); font-weight:600; font-size:13px; color: var(--text); }
+  .bar.pivot{ border-color: var(--amber); box-shadow: 0 0 12px rgba(232,163,61,.4); }
+  .bar.sorted{ border-color: var(--violet); background: linear-gradient(180deg, #3a2f5c, #2a2245); }
+  .idx-label{
+    position:absolute; bottom: 14px; width: 64px; text-align:center; font-family: var(--mono);
+    font-size: 10.5px; color: var(--text-muted); transition: left .4s cubic-bezier(.4,0,.2,1);
+  }
+  .ptr-tag{
+    position:absolute; bottom: 190px; width: 64px; text-align:center; font-family: var(--mono);
+    font-weight:700; font-size: 11px; padding: 2px 0; border-radius: 6px;
+    transition: left .4s cubic-bezier(.4,0,.2,1), opacity .25s ease; opacity: 0;
+  }
+  .ptr-tag.i{ color: var(--teal); }
+  .ptr-tag.j{ color: var(--rose); }
+  .ptr-tag.p{ color: var(--amber); }
+
+  .step-msg{
+    margin-top: 14px; background:#0c1220; border:1px solid var(--panel-border); border-radius:10px;
+    padding: 12px 14px; font-size: 13.5px; color: var(--text); line-height:1.5;
+  }
+  .step-msg b{ color: var(--amber); }
+
+  .panel{
+    background: linear-gradient(180deg, var(--panel), #101728);
+    border: 1px solid var(--panel-border); border-radius: 14px; padding: 16px;
+    position: sticky; top: 20px; display:flex; flex-direction:column; gap:14px;
+  }
+  .panel-sec-title{
+    font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+    color: var(--text-muted); margin-bottom: 8px; display:flex; justify-content:space-between;
+  }
+  .stack-list{ display:flex; flex-direction:column-reverse; gap:6px; min-height: 40px; }
+  .stack-row{
+    font-family: var(--mono); font-size: 12px; padding: 7px 10px; border-radius: 8px;
+    background:#1b2438; border:1px solid var(--panel-border); color: var(--text-muted);
+    transition: all .25s ease;
+  }
+  .stack-row.top{ color: var(--text); border-color: var(--amber-dim); background: rgba(232,163,61,.08); }
+
+  .log-list{
+    max-height: 260px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;
+    font-family: var(--mono); font-size: 11.5px;
+  }
+  .log-list::-webkit-scrollbar{ width:7px; }
+  .log-list::-webkit-scrollbar-thumb{ background: var(--panel-border); border-radius:4px; }
+  .log-row{ color: var(--text-muted); padding: 6px 8px; border-radius: 6px; background:#1b2420; line-height:1.4; }
+  .log-row.now{ color: var(--text); background: rgba(232,163,61,.10); border:1px solid var(--amber-dim); }
+
+  .controls{
+    margin-top: 18px; background: rgba(20,27,44,.9); backdrop-filter: blur(8px);
+    border: 1px solid var(--panel-border); border-radius: 14px; padding: 12px 14px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .ctrl-btn{
+    font-family: var(--body); font-weight: 600; font-size: 13px; color: var(--text);
+    background: #1b2438; border: 1px solid var(--panel-border); border-radius: 9px;
+    padding: 8px 13px; cursor: pointer; display: flex; align-items: center; gap: 6px;
+    transition: background .2s ease, border-color .2s ease, transform .08s ease;
+  }
+  .ctrl-btn:hover{ background: #22304e; border-color: var(--line-lit); }
+  .ctrl-btn:active{ transform: scale(.96); }
+  .ctrl-btn:disabled{ opacity:.35; cursor:not-allowed; }
+  .ctrl-btn.primary{ background: linear-gradient(180deg, #e8a33d, #cf8827); color: #1a1305; border-color: transparent; }
+  .ctrl-btn.primary:hover{ filter: brightness(1.06); }
+  .scrub{ flex:1; min-width:180px; display:flex; align-items:center; gap:10px; }
+  .scrub input[type=range]{ flex:1; accent-color: var(--amber); }
+  .step-count{ font-family: var(--mono); font-size: 11px; color: var(--text-muted); white-space:nowrap; }
+  .speed{ display:flex; align-items:center; gap: 8px; font-family: var(--mono); font-size: 11px; color: var(--text-muted); }
+  .speed input[type=range]{ accent-color: var(--amber); width: 90px; }
+
+  @media (prefers-reduced-motion: reduce){ .eyebrow::before{ animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="eyebrow">Execution Trace · Simulation</div>
+    <h1>Quicksort, Step by Step, on a Real Array</h1>
+    <p class="sub">The actual algorithm running on <code>[8, 3, 7, 4, 9, 2, 6, 1]</code> — every comparison, every swap, every recursive call, in the order they really happen. Scrub through it like a debugger, or hit play and watch it sort itself.</p>
+    <div class="legend" id="legend"></div>
+  </header>
+
+  <div class="layout">
+    <div class="stage">
+      <div class="code-box" id="codeBox"></div>
+      <div class="stage-body">
+        <div class="bars-wrap" id="barsWrap"></div>
+      </div>
+      <div class="step-msg" id="stepMsg"></div>
+    </div>
+
+    <div class="panel">
+      <div>
+        <div class="panel-sec-title"><span>Call stack</span><span id="stackDepth">depth 0</span></div>
+        <div class="stack-list" id="stackList"></div>
+      </div>
+      <div>
+        <div class="panel-sec-title"><span>Trace log</span><span id="logCount">0 steps</span></div>
+        <div class="log-list" id="logList"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <button class="ctrl-btn" id="btnReset">⟲ Reset</button>
+    <button class="ctrl-btn" id="btnBack">◂ Back</button>
+    <button class="ctrl-btn primary" id="btnPlay">▶ Play</button>
+    <button class="ctrl-btn" id="btnFwd">Forward ▸</button>
+    <div class="scrub">
+      <span class="step-count" id="stepCount">Step 1 / 1</span>
+      <input type="range" id="scrubber" min="0" max="0" value="0" step="1">
+    </div>
+    <div class="speed"><span>Speed</span><input type="range" id="speed" min="0.5" max="3" step="0.5" value="1"><span id="speedVal">1×</span></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---------------------------------------------------------------
+  // 1. Run the real algorithm once, recording a full execution trace
+  // ---------------------------------------------------------------
+  const initial = [8, 3, 7, 4, 9, 2, 6, 1];
+  const arr = initial.slice();
+  const n = arr.length;
+  const sortedMask = new Array(n).fill(false);
+  const callStack = [];
+  const trace = [];
+
+  function snap(props){
+    trace.push(Object.assign({
+      arr: arr.slice(),
+      stack: callStack.map(f => ({ low:f.low, high:f.high })),
+      sortedMask: sortedMask.slice(),
+      i: null, j: null, pivotIdx: null, line: null
+    }, props));
+  }
+
+  function partition(low, high){
+    const pivot = arr[high];
+    let i = low - 1;
+    snap({ line:8, low, high, i, pivotIdx:high, msg:`Pivot chosen: arr[${high}] = ${pivot}` });
+    for (let j = low; j <= high - 1; j++){
+      const smaller = arr[j] < pivot;
+      snap({ line:11, low, high, i, j, pivotIdx:high,
+             msg:`Compare arr[${j}]=${arr[j]} with pivot ${pivot} — ${smaller ? 'smaller, belongs on the left' : 'not smaller, leave it'}.` });
+      if (smaller){
+        i++;
+        const tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
+        snap({ line:13, low, high, i, j, pivotIdx:high, msg:`Swap arr[${i}] and arr[${j}] → [${arr.join(', ')}]` });
+      }
+    }
+    const tmp = arr[i+1]; arr[i+1] = arr[high]; arr[high] = tmp;
+    const p = i + 1;
+    snap({ line:14, low, high, i:p, pivotIdx:p, msg:`Swap pivot into place: arr[${p}] ↔ arr[${high}] → [${arr.join(', ')}]` });
+    return p;
+  }
+
+  function qsort(low, high){
+    callStack.push({ low, high });
+    if (low < high){
+      snap({ line:2, low, high, msg:`quicksort(${low}, ${high}) — more than one element, partition it.` });
+      const p = partition(low, high);
+      sortedMask[p] = true;
+      snap({ line:3, low, high, pivotIdx:p, msg:`partition() returned ${p}. arr[${p}] is now locked into its final sorted position.` });
+      snap({ line:4, low, high, msg:`Recurse left: quicksort(${low}, ${p-1})` });
+      qsort(low, p-1);
+      snap({ line:5, low, high, msg:`Recurse right: quicksort(${p+1}, ${high})` });
+      qsort(p+1, high);
+    } else {
+      if (low === high){ sortedMask[low] = true; }
+      snap({ line:2, low, high, msg: low===high ? `quicksort(${low}, ${high}) — single element, already sorted.` : `quicksort(${low}, ${high}) — empty range, nothing to do.` });
+    }
+    callStack.pop();
+  }
+
+  qsort(0, n-1);
+  sortedMask.fill(true);
+  snap({ line:null, low:0, high:n-1, msg:`Done — the array is fully sorted: [${arr.join(', ')}]` });
+
+  // ---------------------------------------------------------------
+  // 2. UI
+  // ---------------------------------------------------------------
+  const codeLines = [
+    'function quicksort(arr, low, high):',
+    '  if low < high:',
+    '    p = partition(arr, low, high)',
+    '    quicksort(arr, low, p - 1)',
+    '    quicksort(arr, p + 1, high)',
+    '',
+    'function partition(arr, low, high):',
+    '  pivot = arr[high]',
+    '  i = low - 1',
+    '  for j = low to high - 1:',
+    '    if arr[j] < pivot:',
+    '      i = i + 1',
+    '      swap(arr[i], arr[j])',
+    '  swap(arr[i + 1], arr[high])',
+    '  return i + 1'
+  ];
+
+  const codeBox = document.getElementById('codeBox');
+  const codeLineEls = codeLines.map((txt, idx) => {
+    const row = document.createElement('div');
+    row.className = 'code-line';
+    row.innerHTML = `<span class="ln">${idx+1}</span>${txt.replace(/</g,'&lt;')}`;
+    codeBox.appendChild(row);
+    return row;
+  });
+
+  const legendWrap = document.getElementById('legend');
+  [
+    ['pivot','Pivot'], ['teal','Left pointer (i)'], ['rose','Scan pointer (j)'],
+    ['violet','Locked in sorted position'], ['slate','Unsorted']
+  ].forEach(([key,name]) => {
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    const color = key==='pivot' ? 'var(--amber)' : `var(--${key})`;
+    chip.innerHTML = `<span class="sw" style="background:${color}"></span>${name}`;
+    legendWrap.appendChild(chip);
+  });
+
+  // bars
+  const barsWrap = document.getElementById('barsWrap');
+  const SLOT = 88, BASE_BOTTOM = 40, MAX_H = 150;
+  const barEls = {}, idxLabelEls = [];
+  initial.forEach((v) => {
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    const h = 30 + (v/9)*MAX_H;
+    bar.style.height = h + 'px';
+    const val = document.createElement('div');
+    val.className = 'val'; val.textContent = v;
+    bar.appendChild(val);
+    barsWrap.appendChild(bar);
+    barEls[v] = bar;
+  });
+  for (let idx=0; idx<n; idx++){
+    const lab = document.createElement('div');
+    lab.className = 'idx-label';
+    lab.textContent = idx;
+    barsWrap.appendChild(lab);
+    idxLabelEls.push(lab);
+  }
+  const rangeShade = document.createElement('div');
+  rangeShade.className = 'range-shade';
+  barsWrap.appendChild(rangeShade);
+
+  const iTag = document.createElement('div'); iTag.className = 'ptr-tag i'; iTag.textContent = 'i';
+  const jTag = document.createElement('div'); jTag.className = 'ptr-tag j'; jTag.textContent = 'j';
+  const pTag = document.createElement('div'); pTag.className = 'ptr-tag p'; pTag.textContent = 'pivot';
+  barsWrap.appendChild(iTag); barsWrap.appendChild(jTag); barsWrap.appendChild(pTag);
+
+  const stepMsg = document.getElementById('stepMsg');
+  const stackList = document.getElementById('stackList');
+  const stackDepth = document.getElementById('stackDepth');
+  const logList = document.getElementById('logList');
+  const logCount = document.getElementById('logCount');
+  const scrubber = document.getElementById('scrubber');
+  const stepCount = document.getElementById('stepCount');
+
+  scrubber.max = trace.length - 1;
+
+  let current = 0;
+  let playing = false;
+  let speed = 1;
+
+  function render(){
+    const s = trace[current];
+
+    // code highlight
+    codeLineEls.forEach((el, idx) => el.classList.toggle('active', s.line === idx+1));
+
+    // bars
+    for (let idx=0; idx<n; idx++){
+      const v = s.arr[idx];
+      const bar = barEls[v];
+      bar.style.left = (idx*SLOT) + 'px';
+      bar.classList.toggle('pivot', s.pivotIdx === idx);
+      bar.classList.toggle('sorted', s.sortedMask[idx]);
+      idxLabelEls[idx].style.left = (idx*SLOT) + 'px';
+    }
+
+    // pointer tags
+    if (s.i !== null && s.i >= 0 && s.i < n){ iTag.style.opacity = 1; iTag.style.left = (s.i*SLOT)+'px'; }
+    else { iTag.style.opacity = 0; }
+    if (s.j !== null){ jTag.style.opacity = 1; jTag.style.left = (s.j*SLOT)+'px'; }
+    else { jTag.style.opacity = 0; }
+    if (s.pivotIdx !== null){ pTag.style.opacity = 1; pTag.style.left = (s.pivotIdx*SLOT)+'px'; }
+    else { pTag.style.opacity = 0; }
+
+    // range shade
+    rangeShade.style.left = (s.low*SLOT - 6) + 'px';
+    rangeShade.style.width = ((s.high-s.low+1)*SLOT - (SLOT-64) + 12) + 'px';
+    rangeShade.style.opacity = s.low <= s.high ? 1 : 0;
+
+    // step message
+    stepMsg.innerHTML = `<b>Step ${current+1}/${trace.length}</b> — ${s.msg}`;
+
+    // call stack
+    stackList.innerHTML = '';
+    s.stack.forEach((f, idx) => {
+      const row = document.createElement('div');
+      row.className = 'stack-row' + (idx === s.stack.length-1 ? ' top' : '');
+      row.textContent = `quicksort(${f.low}, ${f.high})`;
+      stackList.appendChild(row);
+    });
+    stackDepth.textContent = 'depth ' + s.stack.length;
+
+    // log
+    logCount.textContent = (current+1) + ' / ' + trace.length;
+    logList.innerHTML = '';
+    for (let k=0; k<=current; k++){
+      const row = document.createElement('div');
+      row.className = 'log-row' + (k === current ? ' now' : '');
+      row.textContent = trace[k].msg;
+      logList.appendChild(row);
+    }
+    logList.scrollTop = logList.scrollHeight;
+
+    // controls
+    scrubber.value = current;
+    stepCount.textContent = `Step ${current+1} / ${trace.length}`;
+    document.getElementById('btnBack').disabled = current === 0;
+    document.getElementById('btnFwd').disabled = current === trace.length - 1;
+  }
+
+  function goTo(idx){
+    current = Math.max(0, Math.min(trace.length-1, idx));
+    render();
+  }
+
+  document.getElementById('btnBack').addEventListener('click', () => { stopPlay(); goTo(current-1); });
+  document.getElementById('btnFwd').addEventListener('click', () => { stopPlay(); goTo(current+1); });
+  document.getElementById('btnReset').addEventListener('click', () => { stopPlay(); goTo(0); });
+  scrubber.addEventListener('input', () => { stopPlay(); goTo(parseInt(scrubber.value,10)); });
+
+  const btnPlay = document.getElementById('btnPlay');
+  function stopPlay(){ playing = false; btnPlay.textContent = '▶ Play'; }
+  function startPlay(){
+    playing = true; btnPlay.textContent = '⏸ Pause';
+    tick();
+  }
+  function tick(){
+    if (!playing) return;
+    if (current >= trace.length-1){ stopPlay(); return; }
+    goTo(current+1);
+    setTimeout(tick, reduceMotion ? 10 : Math.max(120, 500/speed));
+  }
+  btnPlay.addEventListener('click', () => { playing ? stopPlay() : startPlay(); });
+
+  const speedInput = document.getElementById('speed');
+  const speedVal = document.getElementById('speedVal');
+  speedInput.addEventListener('input', () => { speed = parseFloat(speedInput.value); speedVal.textContent = speed+'×'; });
+
+  render();
+})();
+</script>
+</body>
+</html>

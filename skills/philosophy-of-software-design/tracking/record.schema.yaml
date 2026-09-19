@@ -1,0 +1,73 @@
+# Suggested project-local record for principle adherence and outcomes.
+# This is a convention, not a required machine-validated schema.
+
+design_id: example-design-id
+title: Example Design
+decision_path: .design/posd/decisions/example-design.md
+created_at: YYYY-MM-DD
+last_reviewed_at: YYYY-MM-DD
+
+principle_adherence:
+  deep_modules:
+    status: UNKNOWN
+    evidence: []
+  information_hiding:
+    status: UNKNOWN
+    evidence: []
+  pull_complexity_downward:
+    status: UNKNOWN
+    evidence: []
+  different_layer_different_abstraction:
+    status: UNKNOWN
+    evidence: []
+  appropriate_generality:
+    status: UNKNOWN
+    evidence: []
+  define_errors_out_of_existence:
+    status: UNKNOWN
+    evidence: []
+  design_it_twice:
+    status: UNKNOWN
+    evidence: []
+  consistency:
+    status: UNKNOWN
+    evidence: []
+
+expected_outcomes:
+  - hypothesis: ""
+    evidence_to_collect: ""
+    status: PENDING
+
+outcomes:
+  immediate:
+    observed_at: YYYY-MM-DD
+    public_operations: null
+    public_types: null
+    caller_visible_errors: null
+    configuration_knobs: null
+    implementation_concepts_exposed: null
+    representative_change_modules_touched: null
+    notes: []
+
+  observed:
+    status: PENDING
+    observed_at: null
+    interface_changes: []
+    abstraction_bypasses: []
+    unexpected_dependencies: []
+    recurring_workarounds: []
+    bugs_crossing_boundary: []
+    easier_than_expected_changes: []
+    notes: []
+
+  long_term:
+    status: PENDING
+    observed_at: null
+    change_amplification_notes: []
+    interface_stability_notes: []
+    implementation_replaceability_notes: []
+    maintenance_burden_notes: []
+    unknown_unknowns_notes: []
+
+lessons: []
+revisit_triggers: []

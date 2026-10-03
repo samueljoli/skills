@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="An illustrated exploration of the OSI model. Follow seven layers of a network through a connected, scroll-driven diagram.">
+  <title>Seven layers — A network field guide</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' fill='%23f5f4ef'/%3E%3Cpath d='m5 13 15-8 15 8-15 8Zm0 7 15 8 15-8M5 27l15 8 15-8' fill='none' stroke='%23222220' stroke-width='2'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;450;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="guide.js" defer></script>
+</head>
+<body>
+  <a class="skip" href="#reading">Skip to the article</a>
+  <header class="masthead">
+    <a class="wordmark" href="#top" aria-label="Network field guide, beginning">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><path d="m3 10 13-7 13 7-13 7Zm0 6 13 7 13-7M3 22l13 7 13-7"/></svg>
+      <span>FIELD GUIDE<span class="wordmark-sub">TO THE INTERNET</span></span>
+    </a>
+    <div class="chapter-label">01 <span>/</span> NETWORK ARCHITECTURE</div>
+    <a class="source-top" href="https://www.cloudflare.com/learning/ddos/glossary/open-systems-interconnection-model-osi/" target="_blank" rel="noopener">SOURCE ARTICLE <span>↗</span></a>
+    <div class="progress-track" aria-hidden="true"><div id="progress"></div></div>
+  </header>
+
+  <main class="spread" id="top">
+    <aside class="tray" aria-label="Interactive OSI layer diagram">
+      <div class="figure-heading"><span>FIG. 01</span><span>THE OSI REFERENCE MODEL</span><span class="figure-cross">+</span></div>
+      <figure class="diagram-frame">
+        <svg id="stack" viewBox="0 0 620 660" aria-labelledby="stack-title stack-desc">
+          <title id="stack-title">The seven layers of the OSI model</title>
+          <desc id="stack-desc">An exploded stack, from application at the top to physical at the bottom. Select a layer to read its explanation. The currently discussed layer is outlined in vermilion.</desc>
+          <defs>
+            <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse"><path d="M-1 1 1-1M0 6 6 0M5 7 7 5" fill="none" stroke="currentColor" stroke-width=".65"/></pattern>
+            <pattern id="grid" width="20" height="20" patternUnits="userSpaceOnUse"><circle cx="1" cy="1" r=".65" fill="#a6a59b" opacity=".4"/></pattern>
+          </defs>
+          <rect x="20" y="20" width="580" height="615" fill="url(#grid)"/>
+          <g class="construction" aria-hidden="true">
+            <path d="M178 44V599M374 44V599M470 90V599M82 90V599"/>
+            <path d="m66 577 214 64 218-67M66 591l214 64 218-67"/>
+            <path d="M41 124V548m-5-419 5-5 5 5m-10 414 5 5 5-5"/>
+            <text x="26" y="342" transform="rotate(-90 26 342)">TOWARD THE WIRE</text>
+          </g>
+          <g id="layers">
+          <a class="layer-link" href="#application" data-layer="application" aria-label="Read about Application">
+            <text class="layer-number" x="66" y="119">07</text>
+            <path class="layer-tick" d="M91 114H119"/>
+            <g class="layer-shape">
+              <path class="layer-top" d="M124 101 244 66 456 119 336 154Z"/>
+              <path class="layer-front" d="M124 101 336 154V174L124 121Z"/>
+              <path class="layer-side" d="M336 154 456 119V139L336 174Z"/>
+              <path class="layer-hatch" d="M336 154 456 119V139L336 174Z"/>
+              <text class="layer-name" x="169" y="101" transform="rotate(14 169 101)">Application</text>
+              <circle class="layer-port" data-port="application-out" cx="456" cy="130" r="3"/>
+            </g>
+          </a>
+          <a class="layer-link" href="#presentation" data-layer="presentation" aria-label="Read about Presentation">
+            <text class="layer-number" x="66" y="187">06</text>
+            <path class="layer-tick" d="M91 182H119"/>
+            <g class="layer-shape">
+              <path class="layer-top" d="M124 169 244 134 456 187 336 222Z"/>
+              <path class="layer-front" d="M124 169 336 222V242L124 189Z"/>
+              <path class="layer-side" d="M336 222 456 187V207L336 242Z"/>
+              <path class="layer-hatch" d="M336 222 456 187V207L336 242Z"/>
+              <text class="layer-name" x="169" y="169" transform="rotate(14 169 169)">Presentation</text>
+              <circle class="layer-port" data-port="presentation-out" cx="456" cy="198" r="3"/>
+            </g>
+          </a>
+          <a class="layer-link" href="#session" data-layer="session" aria-label="Read about Session">
+            <text class="layer-number" x="66" y="255">05</text>
+            <path class="layer-tick" d="M91 250H119"/>
+            <g class="layer-shape">
+              <path class="layer-top" d="M124 237 244 202 456 255 336 290Z"/>
+              <path class="layer-front" d="M124 237 336 290V310L124 257Z"/>
+              <path class="layer-side" d="M336 290 456 255V275L336 310Z"/>
+              <path class="layer-hatch" d="M336 290 456 255V275L336 310Z"/>
+              <text class="layer-name" x="169" y="237" transform="rotate(14 169 237)">Session</text>
+              <circle class="layer-port" data-port="session-out" cx="456" cy="266" r="3"/>
+            </g>
+          </a>
+          <a class="layer-link" href="#transport" data-layer="transport" aria-label="Read about Transport">
+            <text class="layer-number" x="66" y="323">04</text>
+            <path class="layer-tick" d="M91 318H119"/>
+            <g class="layer-shape">
+              <path class="layer-top" d="M124 305 244 270 456 323 336 358Z"/>
+              <path class="layer-front" d="M124 305 336 358V378L124 325Z"/>
+              <path class="layer-side" d="M336 358 456 323V343L336 378Z"/>
+              <path class="layer-hatch" d="M336 358 456 323V343L336 378Z"/>
+              <text class="layer-name" x="169" y="305" transform="rotate(14 169 305)">Transport</text>
+              <circle class="layer-port" data-port="transport-out" cx="456" cy="334" r="3"/>
+            </g>
+          </a>
+          <a class="layer-link" href="#network" data-layer="network" aria-label="Read about Network">
+            <text class="layer-number" x="66" y="391">03</text>
+            <path class="layer-tick" d="M91 386H119"/>
+            <g class="layer-shape">
+              <path class="layer-top" d="M124 373 244 338 456 391 336 426Z"/>
+              <path class="layer-front" d="M124 373 336 426V446L124 393Z"/>
+              <path class="layer-side" d="M336 426 456 391V411L336 446Z"/>
+              <path class="layer-hatch" d="M336 426 456 391V411L336 446Z"/>
+              <text class="layer-name" x="169" y="373" transform="rotate(14 169 373)">Network</text>
+              <circle class="layer-port" data-port="network-out" cx="456" cy="402" r="3"/>
+            </g>
+          </a>
+          <a class="layer-link" href="#data-link" data-layer="data-link" aria-label="Read about Data link">
+            <text class="layer-number" x="66" y="459">02</text>
+            <path class="layer-tick" d="M91 454H119"/>
+            <g class="layer-shape">
+              <path class="layer-top" d="M124 441 244 406 456 459 336 494Z"/>
+              <path class="layer-front" d="M124 441 336 494V514L124 461Z"/>
+              <path class="layer-side" d="M336 494 456 459V479L336 514Z"/>
+              <path class="layer-hatch" d="M336 494 456 459V479L336 514Z"/>
+              <text class="layer-name" x="169" y="441" transform="rotate(14 169 441)">Data link</text>
+              <circle class="layer-port" data-port="data-link-out" cx="456" cy="470" r="3"/>
+            </g>
+          </a>
+          <a class="layer-link" href="#physical" data-layer="physical" aria-label="Read about Physical">
+            <text class="layer-number" x="66" y="527">01</text>
+            <path class="layer-tick" d="M91 522H119"/>
+            <g class="layer-shape">
+              <path class="layer-top" d="M124 509 244 474 456 527 336 562Z"/>
+              <path class="layer-front" d="M124 509 336 562V582L124 529Z"/>
+              <path class="layer-side" d="M336 562 456 527V547L336 582Z"/>
+              <path class="layer-hatch" d="M336 562 456 527V547L336 582Z"/>
+              <text class="layer-name" x="169" y="509" transform="rotate(14 169 509)">Physical</text>
+              <circle class="layer-port" data-port="physical-out" cx="456" cy="538" r="3"/>
+            </g>
+          </a>
+          </g>
+        </svg>
+      </figure>
+      <div class="figure-caption">
+        <div class="caption-status"><span class="caption-prefix">IN FOCUS</span><span id="focus-label">07 / APPLICATION</span></div>
+        <div class="signal-strip" aria-hidden="true"><span>DATA</span><span>↓</span><span>SEGMENTS</span><span>↓</span><span>PACKETS</span><span>↓</span><span>FRAMES</span><span>↓</span><span>BITS</span></div>
+        <div class="figure-foot"><span>Scroll to follow. Select a layer to jump.</span><span>07—01</span></div>
+      </div>
+      <nav class="mobile-layers" aria-label="Jump to a layer"></nav>
+    </aside>
+
+    <article id="reading">
+      <div class="intro">
+        <p class="eyebrow">NETWORKS / A VISUAL PRIMER</p>
+        <h1>One message.<br>Seven layers.</h1>
+        <p class="intro-lead">What happens between an idea on your screen and a signal on a wire?</p>
+        <p>The OSI model divides network communication into seven responsibilities. Read down the stack to follow a message from software to signals.</p>
+        <div class="intro-meta"><span>THE OSI MODEL</span><span>4 MIN READ</span></div>
+        <a class="begin" href="#application"><span class="begin-symbol" aria-hidden="true">↓</span> Follow the layers</a>
+      </div>
+
+      <section class="layer-section" id="application" data-step="application" data-label="Application" data-number="07">
+        <div class="section-meta"><span>LAYER 07</span><span>MEANING</span></div>
+        <h2>Application</h2>
+        <p class="connected" data-connect="application-out"><span class="text-port" aria-hidden="true"></span>Application protocols define the exchanges software uses to request and deliver information.</p>
+        <div class="specimen"><span class="specimen-label">A REQUEST, BEFORE THE JOURNEY</span><code><b>GET</b> /hello HTTP/1.1<br>Host: example.com</code></div>
+        <p class="aside-note">HTTP gives this request a meaning: retrieve a resource. The lower layers carry the request without needing to understand the page.</p>
+        <div class="layer-footer"><span>EXAMPLE</span><span>HTTP · SMTP</span></div>
+      </section>
+
+      <section class="layer-section" id="presentation" data-step="presentation" data-label="Presentation" data-number="06">
+        <div class="section-meta"><span>LAYER 06</span><span>REPRESENTATION</span></div>
+        <h2>Presentation</h2>
+        <p class="connected" data-connect="presentation-out"><span class="text-port" aria-hidden="true"></span>Presentation concerns how information is represented, including encoding, compression, and encryption.</p>
+        <div class="specimen conversion"><div><span class="specimen-label">CHARACTER</span><code>A</code></div><span class="conversion-arrow" aria-hidden="true">→</span><div><span class="specimen-label">UTF-8 BYTE</span><code>01000001</code></div></div>
+        <p class="aside-note">Two systems need a shared interpretation of the bytes they exchange. In real Internet software, these responsibilities can live across several protocols and libraries.</p>
+        <div class="layer-footer"><span>QUESTION</span><span>How should these bytes be interpreted?</span></div>
+      </section>
+
+      <section class="layer-section" id="session" data-step="session" data-label="Session" data-number="05">
+        <div class="section-meta"><span>LAYER 05</span><span>CONVERSATION</span></div>
+        <h2>Session</h2>
+        <p class="connected" data-connect="session-out"><span class="text-port" aria-hidden="true"></span>The session layer organizes a conversation: establishing it, coordinating it, and closing it.</p>
+        <div class="specimen session-line"><span>OPEN</span><i></i><span>EXCHANGE</span><i></i><span>CLOSE</span></div>
+        <p class="aside-note">Imagine a long exchange with agreed checkpoints. Keeping track of the conversation is a separate concern from transporting each individual piece.</p>
+        <div class="layer-footer"><span>QUESTION</span><span>Where are we in the conversation?</span></div>
+      </section>
+
+      <section class="layer-section" id="transport" data-step="transport" data-label="Transport" data-number="04">
+        <div class="section-meta"><span>LAYER 04</span><span>END TO END</span></div>
+        <h2>Transport</h2>
+        <p class="connected" data-connect="transport-out"><span class="text-port" aria-hidden="true"></span>Transport provides communication between endpoints. TCP adds ordered, reliable delivery; UDP provides datagrams without those guarantees.</p>
+        <div class="specimen segments"><span class="specimen-label">A BYTE STREAM, CARRIED IN PIECES</span><div><code>01</code><code>02</code><code>03</code><code>04</code><span>…</span></div></div>
+        <p class="aside-note">With TCP, a receiver acknowledges received data. Missing bytes can be retransmitted, while the application sees an ordered stream.</p>
+        <div class="layer-footer"><span>EXAMPLE</span><span>TCP · UDP</span></div>
+      </section>
+
+      <section class="layer-section" id="network" data-step="network" data-label="Network" data-number="03">
+        <div class="section-meta"><span>LAYER 03</span><span>DESTINATION</span></div>
+        <h2>Network</h2>
+        <p class="connected" data-connect="network-out"><span class="text-port" aria-hidden="true"></span>The network layer addresses packets and moves them along routes toward their destination.</p>
+        <div class="specimen packet"><span class="specimen-label">IP PACKET / SCHEMATIC</span><div><code>IP HEADER</code><code>PAYLOAD</code></div><span class="packet-address">DESTINATION 192.0.2.8</span></div>
+        <p class="aside-note">Each router chooses a next hop. The packet can cross many links before it reaches the destination network.</p>
+        <div class="layer-footer"><span>EXAMPLE</span><span>IP</span></div>
+      </section>
+
+      <section class="layer-section" id="data-link" data-step="data-link" data-label="Data link" data-number="02">
+        <div class="section-meta"><span>LAYER 02</span><span>ONE LINK</span></div>
+        <h2>Data link</h2>
+        <p class="connected" data-connect="data-link-out"><span class="text-port" aria-hidden="true"></span>The data link layer carries frames across a local link between connected network devices.</p>
+        <div class="specimen packet frame"><span class="specimen-label">ETHERNET FRAME / SCHEMATIC</span><div><code>LINK HEADER</code><code>IP PACKET</code><code>CHECK</code></div></div>
+        <p class="aside-note">A packet can be wrapped in an Ethernet frame for one hop and a different kind of frame for another. The link changes; the destination still matters.</p>
+        <div class="layer-footer"><span>EXAMPLE</span><span>Ethernet · Wi-Fi</span></div>
+      </section>
+
+      <section class="layer-section" id="physical" data-step="physical" data-label="Physical" data-number="01">
+        <div class="section-meta"><span>LAYER 01</span><span>THE PHYSICAL WORLD</span></div>
+        <h2>Physical</h2>
+        <p class="connected" data-connect="physical-out"><span class="text-port" aria-hidden="true"></span>The physical layer transmits bits through a medium using electrical, optical, or radio signals.</p>
+        <div class="specimen waveform"><span class="specimen-label">BITS → SIGNAL / SIMPLIFIED</span><svg viewBox="0 0 400 86" role="img" aria-label="An illustrative high and low signal representing the bits one zero one one zero zero one zero"><path class="wave-grid" d="M0 25H400M0 65H400"/><path class="wave" d="M0 25H50V65H100V25H200V65H300V25H350V65H400"/><g><text x="25" y="13">1</text><text x="75" y="13">0</text><text x="125" y="13">1</text><text x="175" y="13">1</text><text x="225" y="13">0</text><text x="275" y="13">0</text><text x="325" y="13">1</text><text x="375" y="13">0</text></g></svg></div>
+        <p class="aside-note">A bit is an abstraction. On a real link, a receiver measures a physical signal and interprets it using an agreed signaling scheme.</p>
+        <div class="layer-footer"><span>MEDIUM</span><span>Copper · Fiber · Air</span></div>
+      </section>
+
+      <section class="closing" id="perspective">
+        <p class="eyebrow">PUTTING IT TOGETHER</p>
+        <h2>A model for thinking.</h2>
+        <p>OSI is a conceptual framework. The Internet’s actual protocol stack does not map neatly to all seven layers.</p>
+        <p class="aside-note">Use the layers to ask a more precise question. Is the signal missing? Is the next hop unreachable? Did the application reject the request?</p>
+        <div class="source-note"><span class="specimen-label">READ FURTHER</span><a href="https://www.cloudflare.com/learning/ddos/glossary/open-systems-interconnection-model-osi/" target="_blank" rel="noopener">Cloudflare — What is the OSI model?</a><a href="https://www.rfc-editor.org/rfc/rfc9293.html" target="_blank" rel="noopener">RFC 9293 — Transmission Control Protocol</a><p>An original visual companion to the Cloudflare article. Design study inspired by Making Software.</p></div>
+        <a class="back-top" href="#top">Back to the beginning ↑</a>
+      </section>
+    </article>
+  </main>
+  <svg id="connections" aria-hidden="true"></svg>
+  <noscript><p class="noscript">The article is fully readable without JavaScript. Enable JavaScript to explore the connected diagram.</p></noscript>
+</body>
+</html>

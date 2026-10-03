@@ -1,0 +1,4 @@
+interface:
+  display_name: "Connected Tutorials"
+  short_description: "Illustrated tutorials with sticky, connected diagrams"
+  default_prompt: "Use $connected-tutorials to turn this topic or source into an illustrated tutorial with a sticky diagram and scroll-linked explanations."

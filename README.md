@@ -54,10 +54,3 @@ links to by relative path.
 1. Create `skills/<category>/<your-skill-name>/SKILL.md`.
 2. Write tight, trigger-focused frontmatter and clear instructions.
 3. Run `./scripts/list-skills.sh` to confirm it is discovered.
-
-## Skills
-
-### Example
-
-- **[hello-skill](./skills/example/hello-skill/SKILL.md)**: An example skill
-  demonstrating the structure. Replace it with a real skill.

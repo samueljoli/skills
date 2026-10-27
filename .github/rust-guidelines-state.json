@@ -1,0 +1,15 @@
+{
+  "checked_at": "2026-10-27T03:44:51Z",
+  "sources": {
+    "microsoft": {
+      "repo": "microsoft/rust-guidelines",
+      "ref": "main",
+      "sha": "9585e288d21d2da994a0550c926a09b62d79f8bd"
+    },
+    "rust-api": {
+      "repo": "rust-lang/api-guidelines",
+      "ref": "master",
+      "sha": "97a0969cb07fe4cabb0eed8a56234053f47d83dc"
+    }
+  }
+}

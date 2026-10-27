@@ -54,3 +54,14 @@ links to by relative path.
 1. Create `skills/<category>/<your-skill-name>/SKILL.md`.
 2. Write tight, trigger-focused frontmatter and clear instructions.
 3. Run `./scripts/list-skills.sh` to confirm it is discovered.
+
+## Upstream guideline tracking
+
+A monthly GitHub Actions workflow checks the current commits on these upstream branches:
+
+- `microsoft/rust-guidelines` on `main`
+- `rust-lang/api-guidelines` on `master`
+
+When either repository changes, the workflow opens an issue and assigns it to the repository owner. It records the last checked commits in `.github/rust-guidelines-state.json`.
+
+To use a different assignee, create the repository variable `RUST_GUIDELINES_ASSIGNEE`. Run the workflow manually from the Actions tab with `workflow_dispatch`.

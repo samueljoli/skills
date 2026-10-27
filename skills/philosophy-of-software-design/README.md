@@ -24,3 +24,9 @@ Suggested repository layout after adopting the skill:
 ```
 
 Start with `SKILL.md`.
+
+## Error handling
+
+For error-handling work, the skill loads [the error-handling reference](references/error-handling.md). It covers failure contracts, recovery ownership, propagation, retries, and failure tests. It includes Rust examples based on the sled article without requiring nested `Result` types or a specific error library.
+
+The reference uses the existing design, review, and retrospective modes. Design principles remain in `SKILL.md` and the principle references. Test results and operational evidence remain separate from claims about design quality.

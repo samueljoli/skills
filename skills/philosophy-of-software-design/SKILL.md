@@ -1,6 +1,6 @@
 ---
 name: philosophy-of-software-design
-description: Apply John Ousterhout-inspired software design principles when designing or reviewing libraries, applications, APIs, modules, and systems. Use this skill to reduce complexity, build deeper abstractions, compare alternative designs, detect information leakage and shallow modules, and record both principle adherence and real-world outcomes over time.
+description: Apply John Ousterhout-inspired software design principles when designing or reviewing libraries, applications, APIs, modules, and systems. Use for error handling, recovery policies, and failure tests as well as broader design work. Reduce complexity, build deeper abstractions, compare alternative designs, detect information leakage and shallow modules, and record both principle adherence and real-world outcomes over time.
 ---
 
 # Philosophy of Software Design
@@ -126,6 +126,8 @@ Prefer a small number of broadly useful operations when they simplify the interf
 ### Define errors out of existence
 
 Before adding an error case, ask whether the API semantics can make the condition normal, impossible, or internally recoverable. Do not erase errors that callers genuinely need to distinguish.
+
+For work on failure semantics, propagation, recovery, retries, or failure tests, read `references/error-handling.md` before proceeding. Apply it within the selected mode, not as a separate workflow. Record the failure contract, recovery owner, and test evidence or gaps in the existing outputs. Do not treat logging, cleanup, or propagation alone as proof of successful recovery.
 
 ### Design it twice
 
@@ -398,6 +400,7 @@ Load only what is needed:
 - Complexity diagnosis -> `references/complexity.md`
 - Principle definitions -> `references/principles.md`
 - Abstraction/API design -> `references/abstractions.md`
+- Error handling, recovery, retries, or failure tests -> `references/error-handling.md`
 - Code/PR review -> `references/red-flags.md`
 - Structured interrogation -> `references/review-questions.md`
 - Design work -> `templates/design-review.md`, `templates/design-decision.md`

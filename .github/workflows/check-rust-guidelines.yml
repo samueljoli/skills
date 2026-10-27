@@ -1,0 +1,50 @@
+name: Check upstream Rust guidelines
+
+on:
+  schedule:
+    # Run on the first day of each month at 09:17 UTC.
+    - cron: "17 9 1 * *"
+  workflow_dispatch:
+
+concurrency:
+  group: check-rust-guidelines
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the default branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Track upstream commits and open issues
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          # Set repository variable RUST_GUIDELINES_ASSIGNEE to override this.
+          ISSUE_ASSIGNEE: ${{ vars.RUST_GUIDELINES_ASSIGNEE || github.repository_owner }}
+        run: python3 scripts/check-rust-guidelines.py
+
+      - name: Commit the new baselines
+        env:
+          DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .github/rust-guidelines-state.json
+
+          if git diff --cached --quiet; then
+            echo "The tracked baselines did not change."
+            exit 0
+          fi
+
+          git commit -m "chore: update Rust guideline baselines"
+          git fetch origin "$DEFAULT_BRANCH"
+          git rebase "origin/$DEFAULT_BRANCH"
+          git push origin "HEAD:$DEFAULT_BRANCH"
